@@ -143,11 +143,11 @@ def run(screen):
 
         # --- UI ---
         avg = sum(grades) / len(grades) if grades else 0
-        screen.blit(font.render(f"Priemer: {avg:.2f}", True, WHITE), (20, 20))
+        screen.blit(font.render(f"Average: {avg:.2f}", True, WHITE), (20, 20))
 
         elapsed = pygame.time.get_ticks() - start_time
         time_left = max(0, (game_duration - elapsed) // 1000)
-        screen.blit(font.render(f"Cas: {time_left}s", True, WHITE), (20, 70))
+        screen.blit(font.render(f"Time: {time_left}s", True, WHITE), (20, 70))
 
         # --- Hudobné tlačidlo s gradientom ---
         draw_music_button(screen, music_button_rect, get_music_state())

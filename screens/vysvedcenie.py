@@ -63,11 +63,11 @@ def run(screen):
         screen.blit(background, (0, 0))
 
         # Title
-        title_text = font_big.render("VYSVEDCENIE", True, WHITE)
+        title_text = font_big.render("REPORT CARD", True, WHITE)
         screen.blit(title_text, title_text.get_rect(center=(width // 2, height // 4)))
 
         # Score
-        score_text = font.render(f"Priemer: {last_score:.2f}", True, WHITE)
+        score_text = font.render(f"Average: {last_score:.2f}", True, WHITE)
         screen.blit(score_text, score_text.get_rect(center=(width // 2, height // 2 - 50)))
 
         # Buttons
