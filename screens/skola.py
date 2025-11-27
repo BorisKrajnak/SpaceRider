@@ -83,7 +83,8 @@ def run(screen):
     if os.path.exists(background_img_path):
         background_img = pygame.image.load(background_img_path).convert()
         # použijeme smoothscale pre ostrejší výsledok
-        background_img = pygame.transform.smoothscale(background_img, (width, height))
+        background_img = pygame.image.load(background_img_path).convert()
+
     else:
         background_img = pygame.Surface((width, height))
         background_img.fill(BG_COLOR)
