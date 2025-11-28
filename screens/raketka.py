@@ -2,13 +2,12 @@
 import os
 import json
 import random
-import time
 import pygame
 
 from core.config import get_path, IMG_DIR
-from core.music_manager import set_volume, get_music_state, toggle_mute, start_music
+from core.music_manager import set_volume, get_music_state, toggle_mute
 from core.game_state import GameState
-from screens.vyber_pozadia import nacitaj_pozadie
+from core.vyber_pozadia import nacitaj_pozadie
 
 
 # --- Hrateľné parametre (konštanty) ---

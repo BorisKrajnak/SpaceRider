@@ -2,13 +2,12 @@
 import os
 import json
 import random
-import time
 import pygame
 
 from core.config import get_path
 from core.music_manager import start_music, set_volume, get_music_state, toggle_mute
 from core.game_state import GameState
-from screens.vyber_pozadia import nacitaj_pozadie
+from core.vyber_pozadia import nacitaj_pozadie
 
 # --- Konštanty (podobne ako v raketka.py) ---
 UFO_WIDTH = 120

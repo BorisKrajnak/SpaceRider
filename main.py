@@ -1,7 +1,8 @@
 import pygame
 import sys
 from core.game_state import GameState
-from screens import uvodne_okno, raketka, ufo, skola, game_over, vysvedcenie, nastavenia_hry, vyber_pozadia
+from screens import uvodne_okno, raketka, ufo, skola, game_over, vysvedcenie, nastavenia_hry
+from core import vyber_pozadia
 
 pygame.init()
 info = pygame.display.Info()
