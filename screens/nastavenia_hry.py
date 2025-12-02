@@ -77,7 +77,6 @@ def run(screen):
         cp = os.path.join(IMG_DIR, "ovladanie", f"ovladanie{i}.png")
         if os.path.exists(cp):
             img = pygame.image.load(cp).convert_alpha()
-            img = pygame.transform.scale(img, (160, 90))
         else:
             img = pygame.Surface((160, 90))
             img.fill(WHITE)
