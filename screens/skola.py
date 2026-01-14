@@ -53,7 +53,7 @@ def run(screen):
     font = pygame.font.Font(font_path, 40) if os.path.exists(font_path) else pygame.font.SysFont("Arial", 40)
 
     # --- Player ---
-    player_img_path = os.path.join(IMG_DIR, "ovladanie", "ovladanie3.png")
+    player_img_path = os.path.join(IMG_DIR, "ovladanie", "ovladanie_skola.png")
     player_width, player_height = 100, 100
     try:
         player_img = pygame.image.load(player_img_path).convert_alpha()

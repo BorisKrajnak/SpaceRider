@@ -8,7 +8,18 @@ from core.game_state import GameState
 
 WHITE = (255, 255, 255)
 
-# --- Gradient tlačidlo ---
+# --------------------------------------------------
+# Pomocná funkcia – scale obrázka so zachovaním pomeru
+# --------------------------------------------------
+def scale_to_fit(image, max_w, max_h):
+    w, h = image.get_size()
+    scale = min(max_w / w, max_h / h)
+    new_size = (int(w * scale), int(h * scale))
+    return pygame.transform.smoothscale(image, new_size)
+
+# --------------------------------------------------
+# Gradient tlačidlo
+# --------------------------------------------------
 def draw_gradient_button(surface, rect, text, font, color1, color2):
     gradient = pygame.Surface((rect.width, rect.height))
     for y in range(rect.height):
@@ -24,7 +35,9 @@ def draw_gradient_button(surface, rect, text, font, color1, color2):
     text_rect = text_surface.get_rect(center=rect.center)
     surface.blit(text_surface, text_rect)
 
-# --- Hudobné tlačidlo Mute/Unmute ---
+# --------------------------------------------------
+# Hudobné tlačidlo Mute / Unmute
+# --------------------------------------------------
 def draw_music_button(surface, rect, music_state):
     color1 = (50, 0, 70)
     color2 = (20, 0, 20)
@@ -47,18 +60,20 @@ def draw_music_button(surface, rect, music_state):
     if os.path.exists(img_path):
         img = pygame.image.load(img_path).convert_alpha()
         img = pygame.transform.smoothscale(img, (rect.width - 10, rect.height - 10))
-        surface.blit(img, (rect.left + (rect.width - img.get_width()) // 2,
-                          rect.top + (rect.height - img.get_height()) // 2))
+        surface.blit(
+            img,
+            (rect.left + (rect.width - img.get_width()) // 2,
+             rect.top + (rect.height - img.get_height()) // 2)
+        )
 
-
+# --------------------------------------------------
+# HLAVNÁ FUNKCIA
+# --------------------------------------------------
 def run(screen):
     start_music()
 
     info = pygame.display.Info()
     width, height = info.current_w, info.current_h
-
-    # --- Farby ---
-    SPACE_BLUE = (10, 10, 40)
 
     # --- Fonty ---
     font_path = os.path.join("assets", "Font", "VOYAGER.ttf")
@@ -73,12 +88,12 @@ def run(screen):
 
     # --- Obrázky charakterov ---
     control_images = []
-    for i in range(1, 4):  # teraz načítame ovladanie1, ovladanie2, ovladanie3
+    for i in range(1, 4):
         cp = os.path.join(IMG_DIR, "ovladanie", f"ovladanie{i}.png")
         if os.path.exists(cp):
             img = pygame.image.load(cp).convert_alpha()
         else:
-            img = pygame.Surface((160, 90))
+            img = pygame.Surface((200, 200))
             img.fill(WHITE)
         control_images.append(img)
 
@@ -90,10 +105,11 @@ def run(screen):
     back_button = pygame.Rect(40, height - button_height - 40, button_width, button_height)
     music_button_rect = pygame.Rect(width - 80, 20, 60, 60)
 
-    # Control rects pre 3 postavy
     control_rects = [pygame.Rect(0, 0, 0, 0) for _ in range(3)]
+
     gradient_color1 = (50, 0, 70)
     gradient_color2 = (20, 0, 20)
+
     clock = pygame.time.Clock()
     running = True
 
@@ -105,50 +121,60 @@ def run(screen):
             g = gradient_color1[1] + (gradient_color2[1] - gradient_color1[1]) * (y / height)
             b = gradient_color1[2] + (gradient_color2[2] - gradient_color1[2]) * (y / height)
             pygame.draw.line(background, (int(r), int(g), int(b)), (0, y), (width, y))
-        background.set_alpha(180)  # jemná priehľadnosť
+        background.set_alpha(180)
         screen.blit(background, (0, 0))
 
         # --- Text ---
         title_surf = title_font.render("SETTINGS", True, WHITE)
-        title_rect = title_surf.get_rect(center=(width // 2, 100))
-        screen.blit(title_surf, title_rect)
+        screen.blit(title_surf, title_surf.get_rect(center=(width // 2, 100)))
 
         control_text_surf = custom_font.render("CHOOSE CHARACTER", True, WHITE)
-        control_text_rect = control_text_surf.get_rect(center=(width // 2, height // 2 - 200))  # posun vyššie
-        screen.blit(control_text_surf, control_text_rect)
+        screen.blit(control_text_surf, control_text_surf.get_rect(center=(width // 2, height // 2 - 200)))
 
         # --- Buttons ---
         draw_gradient_button(screen, start_button, "START", button_font, (50, 0, 70), (20, 0, 20))
         draw_gradient_button(screen, back_button, "BACK", button_font, (50, 0, 70), (20, 0, 20))
 
         # --- Hudba ---
-        music_state = get_music_state()
-        draw_music_button(screen, music_button_rect, music_state)
+        draw_music_button(screen, music_button_rect, get_music_state())
 
-        # --- Výber postavy ---
+        # --- Pozície postáv ---
         positions_ctrl = [
-            (width // 2 - 300, height // 2 - 120),  # ľavá
-            (width // 2 + 80, height // 2 - 120),  # pravá
-            (width // 2 - 110, height // 2 + 60),  # tretia pod nimi
+            (width // 2 - 300, height // 2 - 120),
+            (width // 2 + 80, height // 2 - 120),
+            (width // 2 - 110, height // 2 + 60),
         ]
 
+        # --------------------------------------------------
+        # Vykreslenie výberu postáv (NOVÝ SYSTÉM)
+        # --------------------------------------------------
         for i, pos in enumerate(positions_ctrl):
             is_selected = selected_control == i
-            img = control_images[i]
+            original = control_images[i]
+
             if is_selected:
-                # smoothscale pre vybranú postavu
-                img_scaled = pygame.transform.smoothscale(img, (280, 160))
-                rect = pygame.Rect(pos[0] - 20, pos[1] - 20, 280, 160)
-                screen.blit(img_scaled, rect.topleft)
-                pygame.draw.rect(screen, (255, 255, 0), rect, width=6, border_radius=10)
-                control_rects[i] = rect
+                box_w, box_h = 280, 160
+                rect = pygame.Rect(pos[0] - 20, pos[1] - 20, box_w, box_h)
+                img_scaled = scale_to_fit(original, box_w - 20, box_h - 20)
             else:
-                # smoothscale pre nevybranú postavu
-                img_scaled = pygame.transform.smoothscale(img, (240, 140))
-                rect = pygame.Rect(pos[0], pos[1], 240, 140)
-                screen.blit(img_scaled, rect.topleft)
-                pygame.draw.rect(screen, WHITE, rect, width=4, border_radius=10)
-                control_rects[i] = rect
+                box_w, box_h = 240, 140
+                rect = pygame.Rect(pos[0], pos[1], box_w, box_h)
+                img_scaled = scale_to_fit(original, box_w - 20, box_h - 20)
+
+            # rámček
+            pygame.draw.rect(
+                screen,
+                (255, 255, 0) if is_selected else WHITE,
+                rect,
+                width=6 if is_selected else 4,
+                border_radius=10
+            )
+
+            # centrovanie obrázka
+            img_rect = img_scaled.get_rect(center=rect.center)
+            screen.blit(img_scaled, img_rect.topleft)
+
+            control_rects[i] = rect
 
         # --- Events ---
         for event in pygame.event.get():
@@ -168,10 +194,9 @@ def run(screen):
 
                 if start_button.collidepoint(event.pos) and selected_control is not None:
                     random_index = random.randint(1, 11)
-                    extension = "jpg"
 
                     config = {
-                        "map_image": f"pozadie_vesmir_n{random_index}.{extension}",
+                        "map_image": f"pozadie_vesmir_n{random_index}.jpg",
                         "active_game": "raketka" if selected_control == 0 else "ufo" if selected_control == 1 else "skola"
                     }
 
@@ -183,12 +208,11 @@ def run(screen):
                     elif selected_control == 1:
                         return GameState.UFO_GAME
                     else:
-                        return GameState.SCHOOL_GAME  # nová stavová hodnota
+                        return GameState.SCHOOL_GAME
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     return GameState.MENU
-
                 if event.key == pygame.K_m:
                     toggle_mute()
 
