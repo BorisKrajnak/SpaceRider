@@ -37,6 +37,67 @@ def grade_to_text(grade):
         5: "nedostatočný/á"
     }.get(grade, "neznáme hodnotenie")
 
+# --- Funkcia pre popup nové best score ---
+def show_best_popup(screen, value, trofej_img, draw_bg_func):
+    info = pygame.display.Info()
+    width, height = info.current_w, info.current_h
+    popup_width, popup_height = 1100, 400
+    popup_rect = pygame.Rect((width - popup_width)//2, (height - popup_height)//2, popup_width, popup_height)
+
+    font_path = os.path.join(BASE_DIR, "assets", "Font", "VOYAGER.ttf")
+    title_font = pygame.font.Font(font_path, 60) if os.path.exists(font_path) else pygame.font.SysFont("Arial", 60, bold=True)
+    score_font = pygame.font.Font(font_path, 90) if os.path.exists(font_path) else pygame.font.SysFont("Arial", 90, bold=True)
+    x_font = pygame.font.Font(font_path, 40) if os.path.exists(font_path) else pygame.font.SysFont("Arial", 40, bold=True)
+
+    POPUP_BG = (50, 0, 70)
+    running = True
+    clock = pygame.time.Clock()
+
+    while running:
+        # --- Prekreslenie pozadia (Report Card obrazovky) ---
+        draw_bg_func()
+
+        # --- Jemný overlay ---
+        overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 100))
+        screen.blit(overlay, (0, 0))
+
+        # --- Popup ---
+        popup_surf = pygame.Surface((popup_width, popup_height), pygame.SRCALPHA)
+        popup_surf.fill((0,0,0,0))  # priehľadné pozadie
+
+        # Zaoblené rohy
+        mask_surf = pygame.Surface((popup_width, popup_height), pygame.SRCALPHA)
+        pygame.draw.rect(mask_surf, (*POPUP_BG, 240), mask_surf.get_rect(), border_radius=20)
+        pygame.draw.rect(mask_surf, WHITE, mask_surf.get_rect(), 3, border_radius=20)
+        popup_surf.blit(mask_surf, (0, 0))
+
+        # --- Text ---
+        title_text = title_font.render("You beat your best average!", True, WHITE)
+        score_text = score_font.render(f"{value:.2f}", True, WHITE)
+        x_text = x_font.render("X", True, WHITE)
+
+        popup_surf.blit(title_text, title_text.get_rect(center=(popup_width//2, 150)))
+        popup_surf.blit(score_text, score_text.get_rect(center=(popup_width//2 - 20, 250)))
+        popup_surf.blit(x_text, (popup_width - 50, 10))
+
+        screen.blit(popup_surf, popup_rect.topleft)
+        pygame.display.update()
+        clock.tick(60)
+
+        # --- Event handling ---
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return "QUIT"
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = event.pos
+                if popup_rect.left + popup_width - 50 <= mx <= popup_rect.left + popup_width - 10 \
+                        and popup_rect.top + 10 <= my <= popup_rect.top + 50:
+                    running = False
+
+# --- Hlavná funkcia ---
 def run(screen):
     pygame.font.init()
     clock = pygame.time.Clock()
@@ -64,9 +125,11 @@ def run(screen):
     best_average = load_best("school")  # hra sa volá "school"
 
     # --- Aktualizácia best average ---
+    new_best = False
     if best_average == 0 or last_score < best_average:
         best_average = last_score
         save_score("school", best_average, 0, best=True)
+        new_best = True
 
     # --- Prepočet na známku ---
     grade = round(last_score)
@@ -86,8 +149,7 @@ def run(screen):
         trofej_img = pygame.image.load(trofej_path).convert_alpha()
         trofej_img = pygame.transform.scale(trofej_img, (45, 45))
 
-    running = True
-    while running:
+    def draw_bg():
         # --- Gradient pozadia ---
         background = pygame.Surface((width, height))
         for y in range(height):
@@ -102,11 +164,12 @@ def run(screen):
         title_text = font_big.render("REPORT CARD", True, WHITE)
         screen.blit(title_text, title_text.get_rect(center=(width // 2, height // 4 - 110)))
 
-        # --- Best priemer hore s trofejou ---
-        best_text = font.render(f"BEST AVERAGE: {best_average:.2f}", True, WHITE)
-        best_rect = best_text.get_rect(center=(width // 2, height//3 - 110))
-        screen.blit(best_text, best_rect)
-
+        # --- Best priemer ---
+        best_text_surf = font.render(f"BEST AVERAGE: {best_average:.2f}", True, WHITE)
+        best_rect = best_text_surf.get_rect(center=(width // 2, height//3 - 110))
+        screen.blit(best_text_surf, best_rect)
+        if trofej_img:
+            screen.blit(trofej_img, (best_rect.right + 10, best_rect.top))
 
         # --- Výpis skóre a hodnotenia ---
         avg_text = font.render(f"AVERAGE: {last_score:.2f}", True, WHITE)
@@ -129,6 +192,16 @@ def run(screen):
             icon = pygame.image.load(icon_path).convert_alpha()
             icon = pygame.transform.smoothscale(icon, (music_button_rect.width - 10, music_button_rect.height - 10))
             screen.blit(icon, (music_button_rect.x + 5, music_button_rect.y + 5))
+
+    # --- Popup ak je nové best score ---
+    if new_best:
+        res = show_best_popup(screen, best_average, trofej_img, draw_bg)
+        if res == "QUIT":
+            return None
+
+    running = True
+    while running:
+        draw_bg()
 
         # --- Event handling ---
         for event in pygame.event.get():

@@ -116,13 +116,20 @@ class InputBox:
         else:
             display = self.text
 
+        # ✅ Ak je prázdny, použijeme medzeru, aby Pygame nespadol
+        if display == "":
+            display = " "
+
         self.txt_surface = self.font.render(display, True, WHITE)
 
-        # DYNAMICKÉ ROZŠIROVANIE
+        # DYNAMICKÉ ROZŠIROVANIE DO OBOCH STRÁN
         text_width = self.txt_surface.get_width() + 70
-        self.rect.width = max(self.base_width, text_width)
+        new_width = max(self.base_width, text_width)
 
-
+        # 🔥 uložíme stred aby sa box rozširoval symetricky
+        center_x = self.rect.centerx
+        self.rect.width = new_width
+        self.rect.centerx = center_x
 
     def update(self, dt):
         if self.active:
@@ -197,9 +204,14 @@ def login_screen(screen, clock):
     w, h = screen.get_size()
     offset = -50
 
-    email_box = InputBox(w//2-250, h//2-120+offset, 500, 60, "Email", SMALL)
-    password_box = InputBox(w//2-250, h//2-40+offset, 500, 60, "Heslo", SMALL, True)
-    confirm_box = InputBox(w//2-250, h//2+40+offset, 500, 60, "Zopakuj heslo", SMALL, True)
+    email_box = InputBox(0, h // 2 - 120 + offset, 700, 60, "Email", SMALL)
+    email_box.rect.centerx = w // 2
+
+    password_box = InputBox(0, h // 2 - 40 + offset, 700, 60, "Heslo", SMALL, True)
+    password_box.rect.centerx = w // 2
+
+    confirm_box = InputBox(0, h // 2 + 40 + offset, 700, 60, "Zopakuj heslo", SMALL, True)
+    confirm_box.rect.centerx = w // 2
 
     login_btn = pygame.Rect(0, 0, 280, 60)
     back_btn = pygame.Rect(40, h-90, 150, 50)
@@ -215,37 +227,34 @@ def login_screen(screen, clock):
     def attempt_login_or_register():
         nonlocal message, message_color, mode
 
+        message = ""  # reset správy pred pokusom
+        message_color = RED_TEXT
+
         try:
             if mode == "login":
-
-                # ⭐ ULOŽÍME USERA !!!
                 user = auth.sign_in_with_email_and_password(
                     email_box.text,
                     password_box.text
                 )
 
-                set_user(user)  # uloží aktuálne prihláseného hráča
+                set_user(user)
                 return True
 
-            else:
+            else:  # register
                 if password_box.text != confirm_box.text:
                     message = "Hesla sa nezhoduju!"
                     message_color = RED_TEXT
-                    return
+                    return False  # explicitne False
 
                 auth.create_user_with_email_and_password(
                     email_box.text,
                     password_box.text
                 )
 
-                # ✅ ÚSPEŠNÁ REGISTRÁCIA
                 message = "Uspesne si sa zaregistroval!"
                 message_color = SUCCESS_TEXT
 
-                # 🔁 návrat na login
                 mode = "login"
-
-                # 🧹 vyčisti polia
                 email_box.text = ""
                 password_box.text = ""
                 confirm_box.text = ""
@@ -255,8 +264,7 @@ def login_screen(screen, clock):
                 email_box.update_surface()
                 password_box.update_surface()
                 confirm_box.update_surface()
-
-                return
+                return False
 
         except Exception as e:
             err_str = str(e)
@@ -272,6 +280,8 @@ def login_screen(screen, clock):
                 message = "Zadaj heslo!"
             else:
                 message = "Chyba prihlasenia/registracie!"
+
+            return False  # explicitne False, aby sa dalo skúsiť znovu
 
     while True:
         dt = clock.get_time()
