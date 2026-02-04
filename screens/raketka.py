@@ -8,6 +8,9 @@ from core.config import get_path, IMG_DIR
 from core.music_manager import set_volume, get_music_state, toggle_mute
 from core.game_state import GameState
 from core.vyber_pozadia import nacitaj_pozadie
+from core.score_manager import save_score
+
+
 
 
 # --- Hrateľné parametre (konštanty) ---
@@ -30,18 +33,6 @@ def save_game_config_file(game_name):
     with open(cfg_path, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=4, ensure_ascii=False)
 
-def uloz_best_score(score):
-    path = get_path("data", "best_score_raketka.json")
-    best = 0
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            best = data.get("best", 0)
-    except Exception:
-        best = 0
-    if score > best:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"best": score}, f, indent=2, ensure_ascii=False)
 
 # --- Trieda Meteor ---
 class Meteor:
@@ -453,7 +444,7 @@ def run(screen, map_image=None):
                                 json.dump({"skore": final_score, "cas": elapsed_time}, f, ensure_ascii=False, indent=2)
                         except Exception:
                             pass
-                        uloz_best_score(final_score)
+                        save_score("raketka", final_score, elapsed_time)
                         return GameState.GAME_OVER
 
         # fuel 0 -> koniec hry
@@ -465,7 +456,7 @@ def run(screen, map_image=None):
                     json.dump({"skore": final_score, "cas": elapsed_time}, f, ensure_ascii=False, indent=2)
             except Exception:
                 pass
-            uloz_best_score(final_score)
+            save_score("raketka", final_score, elapsed_time)
             return GameState.GAME_OVER
 
         # vykreslenie scény

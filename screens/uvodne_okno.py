@@ -41,7 +41,6 @@ def draw_music_button(surface, rect, music_state):
     color1 = (50, 0, 70)
     color2 = (20, 0, 20)
 
-    # Gradient v rovnakej veľkosti ako rect
     gradient = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
     for y in range(rect.height):
         r = color1[0] + (color2[0] - color1[0]) * (y / rect.height)
@@ -49,23 +48,14 @@ def draw_music_button(surface, rect, music_state):
         b = color1[2] + (color2[2] - color1[2]) * (y / rect.height)
         pygame.draw.line(gradient, (int(r), int(g), int(b), 220), (0, y), (rect.width, y))
 
-    # Maskovanie podľa border_radius
     mask = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
     pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=8)
     gradient.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-    # Nakreslenie na plátno
     surface.blit(gradient, rect.topleft)
-
-    # Biele orámovanie
     pygame.draw.rect(surface, WHITE, rect, 3, border_radius=8)
 
-    # Ikona podľa stavu
-    if music_state["muted"]:
-        img_path = os.path.join(IMG_DIR, "mute.png")
-    else:
-        img_path = os.path.join(IMG_DIR, "unmute.png")
-
+    img_path = os.path.join(IMG_DIR, "mute.png") if music_state["muted"] else os.path.join(IMG_DIR, "unmute.png")
     if os.path.exists(img_path):
         img = pygame.image.load(img_path).convert_alpha()
         img = pygame.transform.smoothscale(img, (rect.width - 10, rect.height - 10))
@@ -78,7 +68,6 @@ def run(screen):
     info = pygame.display.Info()
     width, height = info.current_w, info.current_h
 
-    # === FONT ===
     voyager_path = os.path.join(FONT_DIR, "VOYAGER.ttf")
     if os.path.exists(voyager_path):
         title_font = pygame.font.Font(voyager_path, 170)
@@ -89,17 +78,15 @@ def run(screen):
         button_font = pygame.font.SysFont("Arial", 50, bold=True)
         small_font = pygame.font.SysFont("Arial", 25)
 
-    # === Background ===
     try:
         background_img = pygame.image.load(f"{IMG_DIR}/pozadie_uvodne_okno.jpg")
         background_img = pygame.transform.scale(background_img, (width, height))
     except:
         background_img = None
 
-    # === Buttons ===
     button_w, button_h = 260, 80
     padding = 150
-    quit_btn = pygame.Rect(padding, height - button_h - padding, button_w, button_h)
+    logout_btn = pygame.Rect(padding, height - button_h - padding, button_w, button_h)  # <- ODHLÁSIŤ SA
     rules_btn = pygame.Rect((width - button_w) // 2, height - button_h - padding, button_w, button_h)
     next_btn = pygame.Rect(width - button_w - padding, height - button_h - padding, button_w, button_h)
     music_size = 60
@@ -118,7 +105,6 @@ def run(screen):
         "Ovladanie: WASD alebo gamepad."
     ]
 
-    # --- Hudba pri štarte ---
     start_music()
     music_state = get_music_state()
 
@@ -134,25 +120,24 @@ def run(screen):
                 continue
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return None
+                    return GameState.LOGIN  # <- odhlásenie cez ESC
                 elif event.key == pygame.K_RETURN:
                     return GameState.SETTINGS
-                elif event.key == pygame.K_m:  # --- M pre mute/unmute ---
+                elif event.key == pygame.K_m:
                     toggle_mute()
-                    music_state = get_music_state()  # aktualizuj stav hudby
+
+                    music_state = get_music_state()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if quit_btn.collidepoint(event.pos):
-                    return None
+                if logout_btn.collidepoint(event.pos):
+                    return GameState.LOGIN  # <- klik na ODHLÁSIŤ SA
                 if next_btn.collidepoint(event.pos):
                     return GameState.SETTINGS
                 if rules_btn.collidepoint(event.pos):
                     showing_rules = not showing_rules
                 if music_btn.collidepoint(event.pos):
                     toggle_mute()
-                    music_state = get_music_state()  # aktualizuj stav hudby
-        # aktualizuj stav hudby
+                    music_state = get_music_state()
 
-        # === RENDERING ===
         if background_img:
             screen.blit(background_img, (0, 0))
         else:
@@ -160,12 +145,11 @@ def run(screen):
 
         screen.blit(title_text, (width // 2 - title_text.get_width() // 2, 140))
 
-        draw_gradient_button(screen, quit_btn, "QUIT", button_font, (50, 0, 70), (20, 0, 20))
+        draw_gradient_button(screen, logout_btn, "LOG OUT", button_font, (50, 0, 70), (20, 0, 20))  # <- text zmenený
         draw_gradient_button(screen, rules_btn, "RULES", button_font, (50, 0, 70), (20, 0, 20))
         draw_gradient_button(screen, next_btn, "NEXT", button_font, (50, 0, 70), (20, 0, 20))
         draw_music_button(screen, music_btn, music_state)
 
-        # --- Zobrazenie pravidiel ---
         if showing_rules:
             popup_w, popup_h = 800, 500
             popup_rect = pygame.Rect((width - popup_w)//2, (height - popup_h)//2, popup_w, popup_h)

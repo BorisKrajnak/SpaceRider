@@ -13,10 +13,7 @@ BASE_DIR = os.path.dirname(BASE_DIR)  # Root: /SpaceRider
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 IMG_DIR = os.path.join(ASSETS_DIR, "img")
 MUSIC_DIR = os.path.join(ASSETS_DIR, "music")
-
-# !!! OPRAVA FONT CESTY TU !!!
-FONT_DIR = os.path.join(ASSETS_DIR, "Font")  # presne podľa tvojej štruktúry
-
+FONT_DIR = os.path.join(ASSETS_DIR, "Font")
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 # -------------------------
@@ -30,11 +27,9 @@ def get_path(*parts):
 def load_json(filename, default=None):
     """Bezpečné načítanie JSON súboru z /data."""
     path = os.path.join(DATA_DIR, filename)
-
     if not os.path.exists(path):
         print(f"[WARN] Súbor {filename} neexistuje — použijem predvolenú hodnotu.")
         return default if default is not None else {}
-
     try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -45,12 +40,35 @@ def load_json(filename, default=None):
 def save_json(filename, data):
     """Uloží JSON do /data."""
     path = os.path.join(DATA_DIR, filename)
-
     try:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
         print(f"[ERROR] Chyba pri zapisovaní '{filename}': {e}")
+
+# -------------------------
+# FUNKCIE KONKRÉTNE PRE HRY
+# -------------------------
+
+def save_game_config(active_game, map_image):
+    """Uloží aktuálnu hru a mapu do game_config.json"""
+    config = {"active_game": active_game, "map_image": map_image}
+    save_json("game_config.json", config)
+
+def load_game_config():
+    """Načíta aktuálnu hru zo súboru game_config.json"""
+    config = load_json("game_config.json", {"active_game": "unknown", "map_image": None})
+    return config.get("active_game", "unknown"), config.get("map_image", None)
+
+def load_score():
+    """Načíta score zo súboru skore.json"""
+    data = load_json("skore.json", {"skore": 0, "cas": 0})
+    return data.get("skore", 0), data.get("cas", 0)
+
+def load_best(file_name):
+    """Načíta best score zo súboru"""
+    data = load_json(file_name, {"best": 0})
+    return data.get("best", 0)
 
 # -------------------------
 # AUTO VYTVORENIE PRIEČINKOV
@@ -60,7 +78,6 @@ for folder in [ASSETS_DIR, IMG_DIR, MUSIC_DIR, FONT_DIR, DATA_DIR]:
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-
 # -------------------------
 # DEBUG LOGOVANIE
 # -------------------------
@@ -69,4 +86,5 @@ print("\n===== PATH CHECK =====")
 print("BASE_DIR:", BASE_DIR)
 print("FONT_DIR:", FONT_DIR, "→ exists:", os.path.exists(FONT_DIR))
 print("IMG_DIR:", IMG_DIR, "→ exists:", os.path.exists(IMG_DIR))
+print("DATA_DIR:", DATA_DIR, "→ exists:", os.path.exists(DATA_DIR))
 print("======================\n")
