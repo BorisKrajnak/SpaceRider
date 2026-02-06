@@ -1,14 +1,9 @@
 import os
 import json
 import pygame
-import random
 
 def nacitaj_pozadie(config_file, screen_width, screen_height, map_image=None):
-    """
-    Načíta pozadie podľa configu, alebo použije map_image ak je zadané.
-    """
     if map_image is None:
-        # Načítame z configu
         try:
             with open(config_file, "r") as f:
                 config = json.load(f)

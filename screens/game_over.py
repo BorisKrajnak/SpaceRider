@@ -133,7 +133,7 @@ def show_best_popup(screen, value, trofej_img, draw_bg_func):
 
         # --- Popup ---
         popup_surf = pygame.Surface((popup_width, popup_height), pygame.SRCALPHA)
-        popup_surf.fill((0, 0, 0, 0))  # úplne priehľadné pozadie
+        popup_surf.fill((0, 0, 0, 0))
 
         # Vytvorenie masky s zaoblenými rohmi
         mask_surf = pygame.Surface((popup_width, popup_height), pygame.SRCALPHA)
@@ -162,7 +162,6 @@ def show_best_popup(screen, value, trofej_img, draw_bg_func):
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mx, my = event.pos
-                # Kliknutie na X
                 if popup_rect.left + popup_width - 50 <= mx <= popup_rect.left + popup_width - 10 \
                         and popup_rect.top + 10 <= my <= popup_rect.top + 50:
                     running = False

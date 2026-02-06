@@ -4,7 +4,7 @@ import json
 from core.game_state import GameState
 from core.config import BASE_DIR, IMG_DIR, get_path
 from core.music_manager import toggle_mute, get_music_state
-from core.score_manager import load_best, save_score  # pridáme aj save_score
+from core.score_manager import load_best, save_score
 
 WHITE = (255, 255, 255)
 
@@ -54,19 +54,15 @@ def show_best_popup(screen, value, trofej_img, draw_bg_func):
     clock = pygame.time.Clock()
 
     while running:
-        # --- Prekreslenie pozadia (Report Card obrazovky) ---
         draw_bg_func()
 
-        # --- Jemný overlay ---
         overlay = pygame.Surface((width, height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 100))
         screen.blit(overlay, (0, 0))
 
-        # --- Popup ---
         popup_surf = pygame.Surface((popup_width, popup_height), pygame.SRCALPHA)
         popup_surf.fill((0,0,0,0))  # priehľadné pozadie
 
-        # Zaoblené rohy
         mask_surf = pygame.Surface((popup_width, popup_height), pygame.SRCALPHA)
         pygame.draw.rect(mask_surf, (*POPUP_BG, 240), mask_surf.get_rect(), border_radius=20)
         pygame.draw.rect(mask_surf, WHITE, mask_surf.get_rect(), 3, border_radius=20)

@@ -6,14 +6,11 @@ from core.config import get_path
 LOCAL_DIR = get_path("data")
 
 # ------------------------- UID -------------------------
-
 def _get_uid():
-    """Vráti UID používateľa alebo 'guest' ak nie je prihlásený"""
     user = auth.current_user
     return user["localId"] if user else "guest"
 
 def _get_local_file(game_name, best=False):
-    """Vracia cestu k lokálnemu súboru viazanému na UID"""
     uid = _get_uid()
     filename = (
         f"best_score_{game_name}_{uid}.json"
@@ -23,11 +20,7 @@ def _get_local_file(game_name, best=False):
     return os.path.join(LOCAL_DIR, filename)
 
 # ------------------------- SCORE -------------------------
-
 def load_score(game_name="raketka"):
-    """
-    Načíta posledné skóre (skóre a čas) z Firebase, fallback lokálne.
-    """
     user = auth.current_user
     if user:
         try:
@@ -37,7 +30,7 @@ def load_score(game_name="raketka"):
             if data:
                 return data.get("skore", 0), data.get("cas", 0)
         except Exception as e:
-            print("⚠ Firebase load_score failed:", e)
+            print("Firebase load_score failed:", e)
 
     # Lokálny fallback (už viazaný na UID)
     try:
@@ -48,9 +41,6 @@ def load_score(game_name="raketka"):
         return 0, 0
 
 def save_score(game_name, score, cas=0, best=False):
-    """
-    Uloží skóre alebo best score lokálne a do Firebase.
-    """
     # --- Lokálne uloženie ---
     local_file = _get_local_file(game_name, best=best)
     data = {"best": score} if best else {"skore": score, "cas": cas}
@@ -58,7 +48,7 @@ def save_score(game_name, score, cas=0, best=False):
         with open(local_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
     except Exception as e:
-        print("⚠ Error saving local score:", e)
+        print("Error saving local score:", e)
 
     # --- Firebase uloženie ---
     user = auth.current_user
@@ -71,14 +61,10 @@ def save_score(game_name, score, cas=0, best=False):
             else:
                 db.child(path).update({"skore": score, "cas": cas})
         except Exception as e:
-            print("⚠ Firebase save_score failed:", e)
+            print("Firebase save_score failed:", e)
 
 # ------------------------- BEST SCORE -------------------------
-
 def load_best(game_name="raketka"):
-    """
-    Načíta best score zo Firebase alebo lokálne.
-    """
     best = 0
     user = auth.current_user
 
@@ -91,7 +77,7 @@ def load_best(game_name="raketka"):
             if data and "best" in data:
                 best = data["best"]
         except Exception as e:
-            print("⚠ Firebase load_best failed:", e)
+            print("Firebase load_best failed:", e)
 
     # Lokálny fallback viazaný na UID
     try:

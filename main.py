@@ -3,7 +3,7 @@ import sys
 from core.game_state import GameState
 from screens import uvodne_okno, raketka, ufo, skola, game_over, vysvedcenie, nastavenia_hry
 from core import vyber_pozadia
-from screens.prihlasovanie_registrovanie import login_screen  # prihlasovacia obrazovka
+from screens.prihlasovanie_registrovanie import login_screen
 
 # ---------------- Inicializácia pygame ----------------
 pygame.init()
@@ -17,7 +17,7 @@ pygame.display.set_caption("Space Rider")
 clock = pygame.time.Clock()
 
 # ---------------- Hlavný herný cyklus ----------------
-state = GameState.LOGIN  # začíname prihlasovacím stavom
+state = GameState.LOGIN
 running = True
 
 while running:
@@ -25,7 +25,6 @@ while running:
 
     # --- Spustenie obrazovky podľa stavu ---
     if state == GameState.LOGIN:
-        # login_screen vráti True ak sa podarilo prihlasenie
         prihlasenie_uspesne = login_screen(screen, clock)
         if prihlasenie_uspesne:
             new_state = GameState.MENU
@@ -34,7 +33,6 @@ while running:
 
     elif state == GameState.MENU:
         new_state = uvodne_okno.run(screen)
-        # ak sa hráč rozhodol odhlásiť (vráti GameState.LOGIN)
         if new_state == GameState.LOGIN:
             state = GameState.LOGIN
             continue

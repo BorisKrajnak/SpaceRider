@@ -8,18 +8,16 @@ from core.game_state import GameState
 
 WHITE = (255, 255, 255)
 
-# --------------------------------------------------
+
 # Pomocná funkcia – scale obrázka so zachovaním pomeru
-# --------------------------------------------------
 def scale_to_fit(image, max_w, max_h):
     w, h = image.get_size()
     scale = min(max_w / w, max_h / h)
     new_size = (int(w * scale), int(h * scale))
     return pygame.transform.smoothscale(image, new_size)
 
-# --------------------------------------------------
+
 # Gradient tlačidlo
-# --------------------------------------------------
 def draw_gradient_button(surface, rect, text, font, color1, color2):
     gradient = pygame.Surface((rect.width, rect.height))
     for y in range(rect.height):
@@ -35,9 +33,7 @@ def draw_gradient_button(surface, rect, text, font, color1, color2):
     text_rect = text_surface.get_rect(center=rect.center)
     surface.blit(text_surface, text_rect)
 
-# --------------------------------------------------
 # Hudobné tlačidlo Mute / Unmute
-# --------------------------------------------------
 def draw_music_button(surface, rect, music_state):
     color1 = (50, 0, 70)
     color2 = (20, 0, 20)
@@ -66,9 +62,7 @@ def draw_music_button(surface, rect, music_state):
              rect.top + (rect.height - img.get_height()) // 2)
         )
 
-# --------------------------------------------------
 # HLAVNÁ FUNKCIA
-# --------------------------------------------------
 def run(screen):
     start_music()
 
@@ -145,9 +139,7 @@ def run(screen):
             (width // 2 - 110, height // 2 + 60),
         ]
 
-        # --------------------------------------------------
         # Vykreslenie výberu postáv (NOVÝ SYSTÉM)
-        # --------------------------------------------------
         for i, pos in enumerate(positions_ctrl):
             is_selected = selected_control == i
             original = control_images[i]

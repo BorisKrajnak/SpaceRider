@@ -1,5 +1,4 @@
 import pygame
-import pyrebase
 import sys
 from core.config import FONT_DIR
 from core.auth_manager import set_user
@@ -48,7 +47,6 @@ class InputBox:
         self.show_text = False
         self.show_toggle = is_password
 
-        # Pridáme pozíciu kurzora
         self.cursor_pos = 0
 
         BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -79,7 +77,7 @@ class InputBox:
 
         if event.type == pygame.KEYDOWN and self.active:
 
-            # ⛔ OVLÁDACIE KLÁVESY
+            # OVLÁDACIE KLÁVESY
             if event.key == pygame.K_LEFT:
                 self.cursor_pos = max(0, self.cursor_pos - 1)
                 return
@@ -93,7 +91,7 @@ class InputBox:
                     self.text = self.text[:self.cursor_pos - 1] + self.text[self.cursor_pos:]
                     self.cursor_pos -= 1
                     self.update_surface()
-                return  # ⛔ ZABRÁNI PRIDANIU '\x08'
+                return  #ZABRÁNI PRIDANIU
 
             if event.key == pygame.K_DELETE:
                 if self.cursor_pos < len(self.text):
@@ -101,11 +99,10 @@ class InputBox:
                     self.update_surface()
                 return
 
-            # ⛔ ignoruj netlačiteľné znaky
             if event.unicode == "" or event.unicode == "\x08":
                 return
 
-            # ✅ VLOŽENIE ZNAKU
+
             self.text = self.text[:self.cursor_pos] + event.unicode + self.text[self.cursor_pos:]
             self.cursor_pos += 1
             self.update_surface()
@@ -116,7 +113,7 @@ class InputBox:
         else:
             display = self.text
 
-        # ✅ Ak je prázdny, použijeme medzeru, aby Pygame nespadol
+
         if display == "":
             display = " "
 
@@ -126,7 +123,7 @@ class InputBox:
         text_width = self.txt_surface.get_width() + 70
         new_width = max(self.base_width, text_width)
 
-        # 🔥 uložíme stred aby sa box rozširoval symetricky
+
         center_x = self.rect.centerx
         self.rect.width = new_width
         self.rect.centerx = center_x
@@ -153,7 +150,6 @@ class InputBox:
         else:
             screen.blit(self.txt_surface, (text_x, text_y))
             if self.cursor_visible and self.active:
-                # 🔹 pozícia kurzora podľa cursor_pos
                 if self.is_password and not self.show_text:
                     cursor_x = text_x + self.font.size("*" * self.cursor_pos)[0]
                 else:
@@ -227,7 +223,7 @@ def login_screen(screen, clock):
     def attempt_login_or_register():
         nonlocal message, message_color, mode
 
-        message = ""  # reset správy pred pokusom
+        message = ""
         message_color = RED_TEXT
 
         try:
@@ -240,11 +236,11 @@ def login_screen(screen, clock):
                 set_user(user)
                 return True
 
-            else:  # register
+            else:
                 if password_box.text != confirm_box.text:
                     message = "Hesla sa nezhoduju!"
                     message_color = RED_TEXT
-                    return False  # explicitne False
+                    return False
 
                 auth.create_user_with_email_and_password(
                     email_box.text,
@@ -281,7 +277,7 @@ def login_screen(screen, clock):
             else:
                 message = "Chyba prihlasenia/registracie!"
 
-            return False  # explicitne False, aby sa dalo skúsiť znovu
+            return False
 
     while True:
         dt = clock.get_time()

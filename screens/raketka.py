@@ -17,7 +17,7 @@ from core.score_manager import save_score
 PLAYER_WIDTH = 120
 PLAYER_HEIGHT = 120
 PLAYER_SPEED = 10
-FRAME_RATE_MS = 100  # how fast animation frames change (ms)
+FRAME_RATE_MS = 100
 
 # --- Pomocné funkcie pre ukladanie skóre / config ---
 def save_game_config_file(game_name):
@@ -55,7 +55,6 @@ class Meteor:
     def is_off_screen(self):
         return self.x + self.size < 0
 
-# --- Helper: draw music button (same style as settings) ---
 def draw_music_button(surface, rect, music_state, img_mute, img_unmute):
     # --- gradient background ---
     color1 = (50, 0, 70)
@@ -82,21 +81,15 @@ def draw_music_button(surface, rect, music_state, img_mute, img_unmute):
     img = img_mute if music_state.get("muted", False) else img_unmute
 
     if isinstance(img, pygame.Surface):
-        # škálovanie ikony tak, aby nepresahovala rect
         img_scaled = pygame.transform.smoothscale(img, (rect.width - 10, rect.height - 10))
         surface.blit(img_scaled, (rect.left + (rect.width - img_scaled.get_width()) // 2,
                                   rect.top + (rect.height - img_scaled.get_height()) // 2))
 
 
 def draw_gradient_rect(surface, rect, color_top, color_bottom, radius=12):
-    """Vykreslí gradient box perfektne zarovnaný s border-radius rámikom."""
-
     x, y, w, h = rect
-
-    # 1) vytvoríme gradient surface presne vo veľkosti slotu
     gradient = pygame.Surface((w, h), pygame.SRCALPHA)
 
-    # 2) vykreslíme vertikálny prechod
     for i in range(h):
         ratio = i / h
         r = int(color_top[0] + (color_bottom[0] - color_top[0]) * ratio)
@@ -104,17 +97,13 @@ def draw_gradient_rect(surface, rect, color_top, color_bottom, radius=12):
         b = int(color_top[2] + (color_bottom[2] - color_top[2]) * ratio)
         pygame.draw.line(gradient, (r, g, b), (0, i), (w, i))
 
-    # 3) vytvoríme masku podľa border-radius
     mask = pygame.Surface((w, h), pygame.SRCALPHA)
     pygame.draw.rect(mask, (255, 255, 255), (0, 0, w, h), border_radius=radius)
 
-    # 4) aplikujeme maskovanie gradientu
     gradient.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-    # 5) vykreslíme hotový gradient box
     surface.blit(gradient, (x, y))
 
-    # 6) teraz presne nakreslíme rámček
     pygame.draw.rect(surface, (255, 255, 255), rect, width=2, border_radius=radius)
 
 
@@ -124,8 +113,6 @@ def draw_gradient_rect(surface, rect, color_top, color_bottom, radius=12):
 def run(screen, map_image=None):
     width, height = screen.get_size()
 
-    # Ak je map_image None → použije default alebo náhodnú mapu
-    # --- FIX pre náhodnú mapu pri reštarte ---
     settings_file = get_path("data", "settings.json")
     try:
         with open(settings_file, "r") as f:
@@ -134,12 +121,10 @@ def run(screen, map_image=None):
     except Exception:
         random_map_enabled = False
 
-    # Ak je zapnutá random mapa → vždy vyber NOVÚ pri štarte hry (aj pri restart)
     if random_map_enabled:
         available_maps = [f"pozadie_vesmir_n{i}.jpg" for i in range(1, 12)]
         new_map = random.choice(available_maps)
 
-        # zabráni vybraniu tej istej mapy po reštarte
         while new_map == map_image:
             new_map = random.choice(available_maps)
 
@@ -165,7 +150,6 @@ def run(screen, map_image=None):
                 except Exception:
                     pass
     if not player_frames:
-        # placeholder frame ak chýbajú snímky
         surf = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT), pygame.SRCALPHA)
         pygame.draw.polygon(surf, (200,200,255), [(0,PLAYER_HEIGHT),(PLAYER_WIDTH//2,0),(PLAYER_WIDTH,PLAYER_HEIGHT)])
         player_frames = [surf]
@@ -175,11 +159,10 @@ def run(screen, map_image=None):
     if os.path.exists(meteor_img_path):
         meteor_image = pygame.image.load(meteor_img_path).convert_alpha()
     else:
-        # fallback
         meteor_image = pygame.Surface((50,50), pygame.SRCALPHA)
         pygame.draw.circle(meteor_image, (150,150,150), (25,25), 25)
 
-    # HUD images (fuel, star, time, shield)
+    # images (fuel, star, time, shield)
     def load_asset(*parts, size=None):
         p = get_path("assets", "img", *parts)
         if os.path.exists(p):
@@ -225,7 +208,7 @@ def run(screen, map_image=None):
     heart_spawn_time = pygame.time.get_ticks()
     heart_spawn_interval = random.randint(3500, 5000)
     heart_duration_on_map = 5000
-    lives = 0 # default ako vo UFO (3 životy)
+    lives = 0
     max_lives = 3
 
     shield_spawn_pos = None
@@ -241,7 +224,6 @@ def run(screen, map_image=None):
     music_button_size = 60
     music_button_rect = pygame.Rect(width - music_button_size - 20, 20, music_button_size, music_button_size)
 
-    # --- prepare music icons (try load from IMG_DIR, fallback None) ---
     mute_icon_path = os.path.join(IMG_DIR, "mute.png")
     unmute_icon_path = os.path.join(IMG_DIR, "unmute.png")
     mute_img = None
@@ -257,9 +239,8 @@ def run(screen, map_image=None):
         mute_img = None
         unmute_img = None
 
-    # --- pridaj pred hlavným loopom (hneď po načítaní animácie rakety) ---
     BASE_PLAYER_SIZE = max(PLAYER_WIDTH, PLAYER_HEIGHT)
-    SHIELD_RADIUS = int(BASE_PLAYER_SIZE * 1.2)  # veľkosť štítu (možno si upravíš podľa vkusu)
+    SHIELD_RADIUS = int(BASE_PLAYER_SIZE * 1.2)
 
     # fonts
     font_path = get_path("assets", "Font", "VOYAGER.ttf")
@@ -285,7 +266,7 @@ def run(screen, map_image=None):
         # eventy
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return None  # ukonči hru
+                return None
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
                     if len(hotbar_shields) > 0 and not shield_active:
@@ -295,7 +276,7 @@ def run(screen, map_image=None):
                         hotbar_shields.pop(0)
                 if event.key == pygame.K_ESCAPE:
                     return GameState.MENU
-                if event.key == pygame.K_m:  # --- M pre mute/unmute ---
+                if event.key == pygame.K_m:
                     toggle_mute()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if music_button_rect.collidepoint(event.pos):
@@ -367,7 +348,6 @@ def run(screen, map_image=None):
 
         # --- spawn shield on map
         if shield_spawn_pos is None and now - shield_spawn_time > shield_spawn_interval:
-            # spawn iba ak ešte nemáme plný počet
             if len(hotbar_shields) < max_shields:
                 shield_spawn_pos = spawn_shield()
             shield_spawn_time = now
@@ -378,7 +358,6 @@ def run(screen, map_image=None):
 
         # --- spawn heart on map ---
         if heart_spawn_pos is None and now - heart_spawn_time > heart_spawn_interval:
-            # spawn iba ak ešte nemáme plný počet životov
             if lives < max_lives:
                 heart_spawn_pos = (random.randint(50, width - 50), random.randint(50, height - 50))
             heart_spawn_time = now
@@ -388,7 +367,6 @@ def run(screen, map_image=None):
             heart_spawn_time = now
 
         # kolízie a logika
-        # fuel collision
         if fuel_pos is not None:
             fuel_rect = pygame.Rect(fuel_pos[0], fuel_pos[1], fuel_size, fuel_size)
             offset = (fuel_rect.left - frame_rect.left, fuel_rect.top - frame_rect.top)
@@ -425,13 +403,11 @@ def run(screen, map_image=None):
                 meteory_obehol += 1
                 continue
 
-            # collision with player (if shield not active)
             if not shield_active:
                 offset = (meteor.rect.left - frame_rect.left, meteor.rect.top - frame_rect.top)
                 if player_mask.overlap(meteor.mask, offset):
 
                     if lives > 0:
-                        # consume one life and remove meteor (you survive)
                         lives -= 1
                         meteory.remove(meteor)
                         continue
@@ -542,10 +518,8 @@ def run(screen, map_image=None):
 
         # --- draw shield effect (fixed size, no distortion) ---
         if shield_active:
-            # vytvoríme Surface raz podľa pevnej veľkosti
             shield_surface = pygame.Surface((SHIELD_RADIUS * 2, SHIELD_RADIUS * 2), pygame.SRCALPHA)
 
-            # jemný pulz (voliteľné – necháš, ak chceš pekný efekt)
             pulse = 10 * abs((pygame.time.get_ticks() // 150) % 2 - 1)
 
             # štít
@@ -556,7 +530,6 @@ def run(screen, map_image=None):
                 SHIELD_RADIUS
             )
 
-            # umiestnenie presne na stred rakety
             screen.blit(shield_surface, (player_x - SHIELD_RADIUS, player_y - SHIELD_RADIUS))
 
         # --- Draw music button using same style as settings ---
@@ -583,7 +556,6 @@ def run(screen, map_image=None):
     # fallback
     return GameState.MENU
 
-# --- optional standalone runner (for testing) ---
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((1280, 720))

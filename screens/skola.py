@@ -40,7 +40,7 @@ def draw_music_button(surface, rect, music_state):
 def run(screen):
     pygame.mixer.init()
     clock = pygame.time.Clock()
-    start_music()  # spustenie hudby
+    start_music()
 
     info = pygame.display.Info()
     width, height = info.current_w, info.current_h
@@ -68,7 +68,7 @@ def run(screen):
     # --- Predmety ---
     items = []
     SPAWN_EVENT = pygame.USEREVENT + 1
-    pygame.time.set_timer(SPAWN_EVENT, 100)  # častejší spawn
+    pygame.time.set_timer(SPAWN_EVENT, 100)
 
     # --- Hudobné tlačidlo ---
     music_button_rect = pygame.Rect(width - 80, 20, 60, 60)
@@ -81,8 +81,6 @@ def run(screen):
     background_img_path = get_path("assets", "img","map_imagines", "pozadie_pycharm.png")
 
     if os.path.exists(background_img_path):
-        background_img = pygame.image.load(background_img_path).convert()
-        # použijeme smoothscale pre ostrejší výsledok
         background_img = pygame.image.load(background_img_path).convert()
 
     else:
@@ -142,7 +140,7 @@ def run(screen):
 
         screen.blit(player_img, player.topleft)
 
-        # --- UI ---
+
         avg = sum(grades) / len(grades) if grades else 0
         screen.blit(font.render(f"Average: {avg:.2f}", True, WHITE), (20, 20))
 
@@ -150,7 +148,6 @@ def run(screen):
         time_left = max(0, (game_duration - elapsed) // 1000)
         screen.blit(font.render(f"Time: {time_left}s", True, WHITE), (20, 70))
 
-        # --- Hudobné tlačidlo s gradientom ---
         draw_music_button(screen, music_button_rect, get_music_state())
 
         # --- End of game ---

@@ -120,7 +120,7 @@ def run(screen):
                 continue
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return GameState.LOGIN  # <- odhlásenie cez ESC
+                    return GameState.LOGIN
                 elif event.key == pygame.K_RETURN:
                     return GameState.SETTINGS
                 elif event.key == pygame.K_m:
@@ -129,7 +129,7 @@ def run(screen):
                     music_state = get_music_state()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if logout_btn.collidepoint(event.pos):
-                    return GameState.LOGIN  # <- klik na ODHLÁSIŤ SA
+                    return GameState.LOGIN
                 if next_btn.collidepoint(event.pos):
                     return GameState.SETTINGS
                 if rules_btn.collidepoint(event.pos):
