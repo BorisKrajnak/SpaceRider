@@ -6,13 +6,14 @@ import pygame
 
 
 
-from core.music_manager import start_music, set_volume, get_music_state, toggle_mute
+from core.config import get_path, IMG_DIR
+from core.music_manager import set_volume, get_music_state, toggle_mute
 from core.game_state import GameState
 from core.vyber_pozadia import nacitaj_pozadie
 from core.config import save_json, load_json, get_path
 
 
-# --- Konštanty (podobne ako v raketka.py) ---
+# --- Konštanty  ---
 UFO_WIDTH = 120
 UFO_HEIGHT = 120
 UFO_SPEED = 5
@@ -54,10 +55,59 @@ def save_game_config(game_name):
     except Exception:
         pass
 
+def draw_music_button(surface, rect, music_state, img_mute, img_unmute):
+    # --- gradient background ---
+    color1 = (50, 0, 70)
+    color2 = (20, 0, 20)
+    gradient = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    for y in range(rect.height):
+        r = color1[0] + (color2[0] - color1[0]) * (y / rect.height)
+        g = color1[1] + (color2[1] - color1[1]) * (y / rect.height)
+        b = color1[2] + (color2[2] - color1[2]) * (y / rect.height)
+        pygame.draw.line(gradient, (int(r), int(g), int(b), 220), (0, y), (rect.width, y))
+
+    # maskovanie podľa border_radius
+    mask = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=8)
+    gradient.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+    # nakresliť gradient na hlavný surface
+    surface.blit(gradient, rect.topleft)
+
+    # biele orámovanie
+    pygame.draw.rect(surface, (255, 255, 255), rect, 3, border_radius=8)
+
+    # --- ikona ---
+    img = img_mute if music_state.get("muted", False) else img_unmute
+
+    if isinstance(img, pygame.Surface):
+        img_scaled = pygame.transform.smoothscale(img, (rect.width - 10, rect.height - 10))
+        surface.blit(img_scaled, (rect.left + (rect.width - img_scaled.get_width()) // 2,
+                                      rect.top + (rect.height - img_scaled.get_height()) // 2))
+
+def draw_gradient_rect(surface, rect, color_top, color_bottom, radius=12):
+    x, y, w, h = rect
+    gradient = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    for i in range(h):
+        ratio = i / h
+        r = int(color_top[0] + (color_bottom[0] - color_top[0]) * ratio)
+        g = int(color_top[1] + (color_bottom[1] - color_top[1]) * ratio)
+        b = int(color_top[2] + (color_bottom[2] - color_top[2]) * ratio)
+        pygame.draw.line(gradient, (r, g, b), (0, i), (w, i))
+
+    mask = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255), (0, 0, w, h), border_radius=radius)
+    gradient.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+    surface.blit(gradient, (x, y))
+    pygame.draw.rect(surface, (255, 255, 255), rect, 2, border_radius=radius)
+
+
 # --- Triedy pre objekty ---
 class Barrel:
     def __init__(self, screen_w, screen_h, image):
-        self.size = 30
+        self.size = 32
         self.image = pygame.transform.scale(image, (self.size, self.size))
         self.x = screen_w + self.size
         self.y = random.randint(0, screen_h - self.size)
@@ -91,7 +141,7 @@ class Meteor:
 
 class ShieldPickup:
     def __init__(self, screen_w, screen_h, image):
-        self.size = 30
+        self.size = 50
         self.image = pygame.transform.scale(image, (self.size, self.size))
         self.x = screen_w + self.size
         self.y = random.randint(0, screen_h - self.size)
@@ -106,10 +156,11 @@ class ShieldPickup:
     def is_off_screen(self):
         return self.x < -self.size
 
+
 class HeartPickup:
     def __init__(self, screen_w, screen_h, image):
-        self.size = 30
-        self.image = pygame.transform.scale(image, (40, 40))
+        self.size = 50
+        self.image = pygame.transform.scale(image, (50, 50))
         self.x = screen_w + self.size
         self.y = random.randint(0, screen_h - self.size)
         self.speed = 3
@@ -156,6 +207,7 @@ class PlayerUFO:
     def flap(self):
         self.speed_y = JUMP_STRENGTH
 
+
     def draw(self, screen):
         current = self.frames[self.frame_index]
         screen.blit(current, (int(self.x), int(self.y)))
@@ -181,11 +233,15 @@ class PlayerUFO:
 #  run(screen) — hlavný modul (vráti GameState)
 # ---------------------------------------------------------
 def run(screen):
-    start_music()
+    music_state = get_music_state()
     save_game_config("ufo")
 
     width, height = screen.get_size()
     clock = pygame.time.Clock()
+
+    music_size = 60
+    music_button_rect = pygame.Rect(width - music_size - 20, 20, music_size, music_size)
+    music_state = get_music_state()
 
     # načítanie background podľa configu
     config_path = get_path("data", "game_config.json")
@@ -302,12 +358,10 @@ def run(screen):
                     shield_icons.pop()
                     player.activate_shield()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if music_button_rect.collidepoint(event.pos):
-                    if event.button == 3:
-                        set_volume(0.5)
-                        get_music_state()["muted"] = False
-                    else:
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if music_button_rect.collidepoint(event.pos):
                         toggle_mute()
+                        music_state = get_music_state()
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_a]:
@@ -331,7 +385,7 @@ def run(screen):
             fuel -= fuel_depletion_rate
             last_fuel_update = now
             if fuel <= 0:
-                # save score and goto game over
+                # save score
                 save_json("skore.json", {
                     "skore": current_score,
                     "cas": int(elapsed_time)
@@ -339,7 +393,7 @@ def run(screen):
 
                 return GameState.GAME_OVER
 
-        # spawn meteors (becomes faster with time)
+        # spawn meteors
         if now - last_spawn > max(300, spawn_delay - (elapsed_time * 10)):
             meteors.append(Meteor(width, height, meteor_img, 1 + (elapsed_time//30)*0.2))
             last_spawn = now
@@ -366,8 +420,6 @@ def run(screen):
                 meteors.remove(m)
                 meteory_prelietane += 1
                 continue
-            # collision if no shield
-            # compute offset from player rect (player draw not yet called, so create current frame rect)
             player_frame = player.frames[player.frame_index]
             player_rect = player_frame.get_rect(topleft=(int(player.x), int(player.y)))
             player_mask = pygame.mask.from_surface(player_frame)
@@ -455,7 +507,6 @@ def run(screen):
         for m in meteors:
             m.draw(screen)
 
-        # draw player and get rect/mask for HUD/shield drawing
         player_rect, player_mask = player.draw(screen)
 
         # HUD
@@ -473,30 +524,71 @@ def run(screen):
         color = (0,255,0) if fuel_ratio >= 0.65 else (255,165,0) if fuel_ratio >= 0.25 else (255,0,0)
         pygame.draw.rect(screen, color, (20,135, int(214 * fuel_ratio), 24))
 
-        # hotbar shields
+        # --- HOTBAR UFO (ľavý roh) ---
+        hotbar_x = 20
         hotbar_slot_size = 50
-        shield_icon_size = hotbar_slot_size - 10
-        shield_icon_scaled = pygame.transform.scale(shield_img, (shield_icon_size, shield_icon_size))
-        for i in range(len(shield_icons)):
-            x = 10 + i * (shield_icon_size + 5)
-            y = height - shield_icon_size - 10
-            screen.blit(shield_icon_scaled, (x,y))
+        hotbar_spacing = 12
 
-        # heart icons
-        heart_scaled = pygame.transform.scale(heart_img, (40,40))
+        # hearts (nad shieldmi)
+        heart_y = screen.get_height() - 140
         for i in range(len(heart_icons)):
-            screen.blit(heart_scaled, (20 + i * 45, 180))
+            slot_rect = pygame.Rect(hotbar_x + i * (hotbar_slot_size + hotbar_spacing),
+                                    heart_y, hotbar_slot_size, hotbar_slot_size)
+            draw_gradient_rect(screen, slot_rect,
+                               color_top=(100, 0, 110),
+                               color_bottom=(40, 0, 45),
+                               radius=12)
+            heart_scaled = pygame.transform.scale(heart_img, (hotbar_slot_size - 12, hotbar_slot_size - 12))
+            screen.blit(heart_scaled, (slot_rect.x + 6, slot_rect.y + 6))
 
-        # shield status bar
+        # shields (pod srdiečkami)
+        shield_y = heart_y + hotbar_slot_size + 10
+        for i in range(len(shield_icons)):
+            slot_rect = pygame.Rect(hotbar_x + i * (hotbar_slot_size + hotbar_spacing),
+                                    shield_y, hotbar_slot_size, hotbar_slot_size)
+            draw_gradient_rect(screen, slot_rect,
+                               color_top=(100, 0, 110),
+                               color_bottom=(40, 0, 45),
+                               radius=12)
+            shield_scaled = pygame.transform.scale(shield_img, (hotbar_slot_size - 12, hotbar_slot_size - 12))
+            screen.blit(shield_scaled, (slot_rect.x + 6, slot_rect.y + 6))
+
+        # --- shield status bar ---
         if player.shield_active:
-            remaining = max(0, (player.shield_start + player.shield_duration - pygame.time.get_ticks()) // 1000)
-            pygame.draw.rect(screen, (173,216,230), (width//2 - 100, 30, int(200 * remaining / (player.shield_duration//1000)), 20))
+            remaining_ratio = max(0, (
+                        player.shield_start + player.shield_duration - pygame.time.get_ticks()) / player.shield_duration)
+            bar_width = 200
+            bar_height = 25
+            x = width // 2 - bar_width // 2
+            y = 30
 
-        # music button (simple icon)
-        music_state = get_music_state()
-        music_color = (31,10,30) if not music_state.get("muted", False) else (50,50,50)
-        pygame.draw.circle(screen, music_color, music_button_rect.center, music_button_size // 2)
-        pygame.draw.circle(screen, (255,255,255), music_button_rect.center, music_button_size // 2, 2)
+            # pozadie pruhu (tmavá modrá)
+            pygame.draw.rect(screen, (20, 40, 100), (x, y, bar_width, bar_height))
+
+            # fill pruhu (svetlejšia modrá podľa zostávajúceho štítu)
+            fill_width = int(bar_width * remaining_ratio)
+            pygame.draw.rect(screen, (0, 170, 255), (x, y, fill_width, bar_height))
+
+            # orámovanie
+            pygame.draw.rect(screen, (255, 255, 255), (x, y, bar_width, bar_height), 3)
+
+        music_button_size = 60
+        music_button_rect = pygame.Rect(width - music_button_size - 20, 20, music_button_size, music_button_size)
+
+        mute_icon_path = os.path.join(IMG_DIR, "mute.png")
+        unmute_icon_path = os.path.join(IMG_DIR, "unmute.png")
+        mute_img = None
+        unmute_img = None
+        try:
+            if os.path.exists(mute_icon_path):
+                mute_img = pygame.image.load(mute_icon_path).convert_alpha()
+                mute_img = pygame.transform.smoothscale(mute_img, (music_button_size - 10, music_button_size - 10))
+            if os.path.exists(unmute_icon_path):
+                unmute_img = pygame.image.load(unmute_icon_path).convert_alpha()
+                unmute_img = pygame.transform.smoothscale(unmute_img, (music_button_size - 10, music_button_size - 10))
+        except Exception:
+            mute_img = None
+            unmute_img = None
         # two bars
         bar_w = 5; bar_h = music_button_size // 3; spacing = 10
         cx, cy = music_button_rect.center
@@ -506,8 +598,12 @@ def run(screen):
             slash = music_button_size // 3
             pygame.draw.line(screen, (255,255,255), (cx - slash, cy - slash), (cx + slash, cy + slash), 3)
 
+
+        music_state = get_music_state()
+        draw_music_button(screen, music_button_rect, music_state, mute_img if mute_img else mute_icon_path,
+                              unmute_img if unmute_img else unmute_icon_path)
+
         pygame.display.flip()
         clock.tick(60)
 
     return GameState.MENU
-
