@@ -4,10 +4,13 @@ import json
 import random
 import pygame
 
-from core.config import get_path
+
+
 from core.music_manager import start_music, set_volume, get_music_state, toggle_mute
 from core.game_state import GameState
 from core.vyber_pozadia import nacitaj_pozadie
+from core.config import save_json, load_json, get_path
+
 
 # --- Konštanty (podobne ako v raketka.py) ---
 UFO_WIDTH = 120
@@ -17,29 +20,23 @@ GRAVITY = 0.5
 JUMP_STRENGTH = -10
 FRAME_RATE_MS = 70
 
-# --- Pomocné funkcie pre ukladanie skóre / config ---
-def save_score_file(score, elapsed_time):
-    path = get_path("data", "skore.json")
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"skore": score, "cas": int(elapsed_time)}, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
 
-def uloz_best_score_ufo(score):
-    path = get_path("data", "best_score_ufo.json")
-    best = 0
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            best = json.load(f).get("best", 0)
-    except Exception:
-        best = 0
-    if score > best:
-        try:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump({"best": score}, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
+def save_score_ufo(score, elapsed_time):
+    save_json("skore.json", {
+        "skore": score,
+        "cas": int(elapsed_time)
+    })
+
+
+def save_best_score_ufo(score):
+    data = load_json("best_score_ufo.json", {"best": 0})
+    if score > data.get("best", 0):
+        save_json("best_score_ufo.json", {"best": score})
+
+def load_best_score_ufo():
+    data = load_json("best_score_ufo.json", {"best": 0})
+    return data["best"]
+
 
 def save_game_config(game_name):
     cfg = {}
@@ -335,8 +332,11 @@ def run(screen):
             last_fuel_update = now
             if fuel <= 0:
                 # save score and goto game over
-                save_score_file(current_score, elapsed_time)
-                uloz_best_score_ufo(current_score)
+                save_json("skore.json", {
+                    "skore": current_score,
+                    "cas": int(elapsed_time)
+                })
+
                 return GameState.GAME_OVER
 
         # spawn meteors (becomes faster with time)
@@ -382,8 +382,8 @@ def run(screen):
                         except ValueError:
                             pass
                         continue
-                    save_score_file(current_score, elapsed_time)
-                    uloz_best_score_ufo(current_score)
+                    save_score_ufo(current_score, elapsed_time)
+                    save_best_score_ufo(current_score)
                     return GameState.GAME_OVER
 
         # barrels collisions
@@ -510,3 +510,4 @@ def run(screen):
         clock.tick(60)
 
     return GameState.MENU
+

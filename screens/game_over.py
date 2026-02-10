@@ -1,10 +1,17 @@
 import pygame
 import os
 import random
+import json
+from core.config import get_path
 from core.config import IMG_DIR, FONT_DIR, save_game_config
 from core.game_state import GameState
 from core.music_manager import start_music, get_music_state, toggle_mute
 from core.score_manager import load_score, save_score, load_best
+from core.config import load_score
+
+
+
+
 
 # --- Spustenie hudby ---
 start_music()
@@ -166,6 +173,15 @@ def show_best_popup(screen, value, trofej_img, draw_bg_func):
                         and popup_rect.top + 10 <= my <= popup_rect.top + 50:
                     running = False
 
+def get_active_game():
+    path = get_path("data", "game_config.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f).get("active_game", "raketka")
+    except Exception:
+        return "raketka"
+
+
 
 # --- Hlavná funkcia ---
 def run(screen):
@@ -178,8 +194,9 @@ def run(screen):
     big_font = pygame.font.Font(font_path, 100) if os.path.exists(font_path) else pygame.font.SysFont("Arial", 100, bold=True)
 
     # --- Načítanie skóre ---
-    active_game = "raketka"
-    score, cas = load_score(active_game)
+    active_game = get_active_game()
+    score, cas = load_score()
+    #score, cas = load_score(active_game)
     best_score = load_best(active_game)
 
     new_best = False

@@ -38,6 +38,12 @@ def save_json(filename, data):
     except Exception as e:
         print(f"[ERROR] Chyba pri zapisovaní '{filename}': {e}")
 
+def save_game_config_file(game_name):
+    config = load_json("game_config.json", {"active_game": "unknown"})
+    config["active_game"] = game_name
+    save_json("game_config.json", config)
+
+
 # FUNKCIE KONKRÉTNE PRE HRY
 def save_game_config(active_game, map_image):
     config = {"active_game": active_game, "map_image": map_image}
@@ -54,6 +60,13 @@ def load_score():
 def load_best(file_name):
     data = load_json(file_name, {"best": 0})
     return data.get("best", 0)
+
+def save_score(score, elapsed_time):
+    save_json("skore.json", {
+        "skore": score,
+        "cas": int(elapsed_time)
+    })
+
 
 
 # AUTO VYTVORENIE PRIEČINKOV
