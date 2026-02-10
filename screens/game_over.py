@@ -110,7 +110,7 @@ def draw_game_over_screen(screen, width, height, big_font, font, button_font,
 
     # --- Buttons ---
     draw_gradient_button(screen, restart_button, "RESTART", button_font, SPACE_BLUE, PURPLE)
-    draw_gradient_button(screen, settings_button, "SETTINGS", button_font, SPACE_BLUE, PURPLE)
+    draw_gradient_button(screen, settings_button, "MENU", button_font, SPACE_BLUE, PURPLE)
     draw_gradient_button(screen, quit_button, "QUIT", button_font, SPACE_BLUE, PURPLE)
     draw_music_button(screen, mute_button, get_music_state())
 

@@ -98,11 +98,11 @@ def run(screen):
     clock = pygame.time.Clock()
 
     rules_lines = [
-        "Cielom je prezit co najdlhsie vo vesmire a ziskat skore.",
-        "Vyber si mapu, raketku alebo UFO.",
-        "Vyhybaj sa meteoritom, zbieraj palivo a body.",
+        "Cielom je prezit co najdlhsie vo vesmire a ziskat najvecsie skore.",
+        "Vyber raketku, UFO alebo skolsku verziu.",
+        "Vyhybaj sa meteoritom, zbieraj palivo a power upy.",
         "Niektore power-upy su docasne a aktivuj ich klavesou E.",
-        "Ovladanie: WASD alebo gamepad."
+        "Ovladanie: WASD."
     ]
 
     start_music()

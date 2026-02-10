@@ -119,7 +119,7 @@ def run(screen):
         screen.blit(background, (0, 0))
 
         # --- Text ---
-        title_surf = title_font.render("SETTINGS", True, WHITE)
+        title_surf = title_font.render("MENU", True, WHITE)
         screen.blit(title_surf, title_surf.get_rect(center=(width // 2, 100)))
 
         control_text_surf = custom_font.render("CHOOSE CHARACTER", True, WHITE)

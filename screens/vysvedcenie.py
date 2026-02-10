@@ -177,7 +177,7 @@ def run(screen):
 
         # --- Gradient tlačidlá ---
         draw_gradient_button(screen, restart_btn, "RESTART", button_font, gradient_color1, gradient_color2)
-        draw_gradient_button(screen, settings_btn, "SETTINGS", button_font, gradient_color1, gradient_color2)
+        draw_gradient_button(screen, settings_btn, "MENU", button_font, gradient_color1, gradient_color2)
         draw_gradient_button(screen, quit_btn, "QUIT", button_font, gradient_color1, gradient_color2)
 
         # --- Hudobné tlačidlo ---
