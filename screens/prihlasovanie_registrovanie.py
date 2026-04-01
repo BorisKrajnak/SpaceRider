@@ -211,6 +211,8 @@ def login_screen(screen, clock):
 
     login_btn = pygame.Rect(0, 0, 280, 60)
     back_btn = pygame.Rect(40, h-90, 150, 50)
+    auto_login_checked = False
+    checkbox_rect = pygame.Rect(0, 0, 30, 30)
 
     mode = "login"
     message = ""
@@ -246,6 +248,14 @@ def login_screen(screen, clock):
                     email_box.text,
                     password_box.text
                 )
+
+                if auto_login_checked:
+                    user = auth.sign_in_with_email_and_password(
+                        email_box.text,
+                        password_box.text
+                    )
+                    set_user(user)
+                    return True
 
                 message = "Uspesne si sa zaregistroval!"
                 message_color = SUCCESS_TEXT
@@ -292,6 +302,9 @@ def login_screen(screen, clock):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 click = True
 
+                if mode == "register" and checkbox_rect.collidepoint(event.pos):
+                    auto_login_checked = not auto_login_checked
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if mode == "login":
@@ -329,8 +342,12 @@ def login_screen(screen, clock):
             confirm_box.draw(screen)
 
         last_box = password_box if mode == "login" else confirm_box
-        login_btn.centerx = w//2
-        login_btn.y = last_box.rect.bottom + 30
+        login_btn.centerx = w // 2
+
+        if mode == "login":
+            login_btn.y = last_box.rect.bottom + 30
+        else:
+            login_btn.y = last_box.rect.bottom + 70
 
         draw_gradient_button(
             screen, login_btn,
@@ -349,6 +366,31 @@ def login_screen(screen, clock):
             screen.blit(register_surf, reg_rect)
             if click and reg_rect.collidepoint(mouse):
                 mode = "register"
+
+
+        if mode == "register":
+            checkbox_text = SMALL.render("Automaticky prihlasit", True, WHITE)
+            spacing = 10
+            total_width = checkbox_rect.width + spacing + checkbox_text.get_width()
+
+            start_x = w // 2 - total_width // 2
+
+            checkbox_rect.x = start_x
+            checkbox_rect.y = confirm_box.rect.bottom + 20
+
+            text_x = checkbox_rect.right + spacing
+            text_y = checkbox_rect.y + (checkbox_rect.height - checkbox_text.get_height()) // 2
+
+            pygame.draw.rect(screen, WHITE, checkbox_rect, 2)
+
+            if auto_login_checked:
+                start = (checkbox_rect.x + 6, checkbox_rect.y + checkbox_rect.height // 2)
+                mid = (checkbox_rect.x + checkbox_rect.width // 3, checkbox_rect.y + checkbox_rect.height - 6)
+                end = (checkbox_rect.x + checkbox_rect.width - 6, checkbox_rect.y + 6)
+
+                pygame.draw.lines(screen, WHITE, False, [start, mid, end], 4)  # šírka 4 pixely
+
+            screen.blit(checkbox_text, (text_x, text_y))
 
         if mode == "register":
             draw_gradient_button(screen, back_btn, "BACK", SMALL, (70, 0, 50), (30, 0, 20))
