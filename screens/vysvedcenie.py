@@ -124,8 +124,13 @@ def run(screen):
     new_best = False
     if best_average == 0 or last_score < best_average:
         best_average = last_score
-        save_score("school", best_average, 0, best=True)
         new_best = True
+
+        # uloženie BEST DO SAMOSTATNÉHO SUBORU
+        best_path = os.path.join(BASE_DIR, "data", "best_school.json")
+
+        with open(best_path, "w") as f:
+            json.dump({"best": best_average}, f)
 
     # --- Prepočet na známku ---
     grade = round(last_score)

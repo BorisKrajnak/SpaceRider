@@ -6,8 +6,10 @@ from core.config import get_path
 from core.config import IMG_DIR, FONT_DIR, save_game_config
 from core.game_state import GameState
 from core.music_manager import start_music, get_music_state, toggle_mute
-from core.score_manager import load_score, save_score, load_best
+from core.score_manager import  save_score, load_best
 from core.config import load_score
+from core.game_result import GameResult
+from core.score_manager import load_best
 
 
 
@@ -184,7 +186,7 @@ def get_active_game():
 
 
 # --- Hlavná funkcia ---
-def run(screen):
+def run(screen, result: GameResult):
     info = pygame.display.Info()
     width, height = info.current_w, info.current_h
 
@@ -195,15 +197,8 @@ def run(screen):
 
     # --- Načítanie skóre ---
     active_game = get_active_game()
-    score, cas = load_score()
-    #score, cas = load_score(active_game)
-    best_score = load_best(active_game)
 
-    new_best = False
-    if score > best_score:
-        best_score = score
-        save_score(active_game, best_score, cas, best=True)
-        new_best = True
+
 
     # --- Obrázky ---
     star_img = safe_load_image(os.path.join(IMG_DIR, "doplnky", "star.png"), (80, 80))
@@ -217,49 +212,58 @@ def run(screen):
     mute_button = pygame.Rect(width - 100, 30, 70, 70)
 
     clock = pygame.time.Clock()
-    running = True
 
     def draw_bg():
         draw_game_over_screen(screen, width, height, big_font, font, button_font,
                               score, cas, best_score, star_img, time_img, trofej_img,
                               restart_button, settings_button, quit_button, mute_button)
 
-    # --- Popup ak je nové best score ---
-    if new_best:
-        res = show_best_popup(screen, best_score, trofej_img, draw_bg)
-        if res == "QUIT":
-            return None
+    # --- POPUP len raz ---
+    score = result.score
+    cas = result.time
+    if result.game_name == "ufo":
+        best_score = load_best(result.game_name)
+    else:
+        best_score = load_best(result.game_name)
 
+    if result.is_best:
+        show_best_popup(screen, best_score, trofej_img, draw_bg)
+
+    running = True
     while running:
         draw_bg()
 
-        # --- Event handling ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return None
+
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return None
 
-            restart_pressed = (
-                (event.type == pygame.MOUSEBUTTONDOWN and restart_button.collidepoint(event.pos)) or
-                (event.type == pygame.KEYDOWN and event.key == pygame.K_r)
-            )
-            if restart_pressed:
+            # 🔄 RESTART
+            if (event.type == pygame.MOUSEBUTTONDOWN and restart_button.collidepoint(event.pos)) or \
+               (event.type == pygame.KEYDOWN and event.key == pygame.K_r):
+
                 save_score(active_game, score, cas)
+
                 random_index = random.randint(1, 11)
                 chosen_map = f"pozadie_vesmir_n{random_index}.jpg"
                 save_game_config(active_game, chosen_map)
+
                 return GameState.ROCKET_GAME if active_game == "raketka" else GameState.UFO_GAME
 
+            # ⚙️ MENU
             if (event.type == pygame.MOUSEBUTTONDOWN and settings_button.collidepoint(event.pos)) or \
                (event.type == pygame.KEYDOWN and event.key == pygame.K_n):
                 return GameState.SETTINGS
 
+            # ❌ QUIT
             if event.type == pygame.MOUSEBUTTONDOWN and quit_button.collidepoint(event.pos):
                 return None
 
-            if (event.type == pygame.MOUSEBUTTONDOWN and mute_button.collidepoint(event.pos)) \
-                    or (event.type == pygame.KEYDOWN and event.key == pygame.K_m):
+            # 🔊 MUTE
+            if (event.type == pygame.MOUSEBUTTONDOWN and mute_button.collidepoint(event.pos)) or \
+               (event.type == pygame.KEYDOWN and event.key == pygame.K_m):
                 toggle_mute()
 
         pygame.display.update()

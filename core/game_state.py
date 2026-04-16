@@ -8,4 +8,5 @@ class GameState:
     BACKGROUND_SELECT = "background_select"
     GAME_OVER = "game_over"
     VYSVEDCENIE = "vysvedcenie"
+    LEADERBOARD = "leaderboard"
 

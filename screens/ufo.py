@@ -11,6 +11,8 @@ from core.music_manager import set_volume, get_music_state, toggle_mute
 from core.game_state import GameState
 from core.vyber_pozadia import nacitaj_pozadie
 from core.config import save_json, load_json, get_path
+from core.game_result import GameResult
+from core.score_manager import save_score
 
 
 # --- Konštanty  ---
@@ -21,22 +23,18 @@ GRAVITY = 0.5
 JUMP_STRENGTH = -10
 FRAME_RATE_MS = 70
 
-
-def save_score_ufo(score, elapsed_time):
-    save_json("skore.json", {
-        "skore": score,
-        "cas": int(elapsed_time)
-    })
+def game_over_return(score, elapsed_time):
+    is_best = save_score("ufo", score, elapsed_time)
 
 
-def save_best_score_ufo(score):
-    data = load_json("best_score_ufo.json", {"best": 0})
-    if score > data.get("best", 0):
-        save_json("best_score_ufo.json", {"best": score})
 
-def load_best_score_ufo():
-    data = load_json("best_score_ufo.json", {"best": 0})
-    return data["best"]
+    return GameResult(
+        next_state=GameState.GAME_OVER,
+        score=score,
+        time=elapsed_time,
+        is_best=is_best,
+        game_name="ufo"
+    )
 
 
 def save_game_config(game_name):
@@ -352,16 +350,22 @@ def run(screen):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     return GameState.MENU
+
                 if event.key == pygame.K_w:
                     player.flap()
+
                 if event.key == pygame.K_e and shield_icons and not player.shield_active:
                     shield_icons.pop()
                     player.activate_shield()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if music_button_rect.collidepoint(event.pos):
-                        toggle_mute()
-                        music_state = get_music_state()
+
+                if event.key == pygame.K_m:
+                    toggle_mute()
+                    music_state = get_music_state()
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if music_button_rect.collidepoint(event.pos):
+                    toggle_mute()
+                    music_state = get_music_state()
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_a]:
@@ -385,13 +389,13 @@ def run(screen):
             fuel -= fuel_depletion_rate
             last_fuel_update = now
             if fuel <= 0:
-                # save score
-                save_json("skore.json", {
-                    "skore": current_score,
-                    "cas": int(elapsed_time)
-                })
-
-                return GameState.GAME_OVER
+                return GameResult(
+                    next_state=GameState.GAME_OVER,
+                    score=current_score,
+                    time=elapsed_time,
+                    is_best=save_score("ufo", current_score, elapsed_time),
+                    game_name="ufo"
+                )
 
         # spawn meteors
         if now - last_spawn > max(300, spawn_delay - (elapsed_time * 10)):
@@ -434,9 +438,13 @@ def run(screen):
                         except ValueError:
                             pass
                         continue
-                    save_score_ufo(current_score, elapsed_time)
-                    save_best_score_ufo(current_score)
-                    return GameState.GAME_OVER
+                    return GameResult(
+                        next_state=GameState.GAME_OVER,
+                        score=current_score,
+                        time=elapsed_time,
+                        is_best=save_score("ufo", current_score, elapsed_time),
+                        game_name="ufo"
+                    )
 
         # barrels collisions
         for b in barrels[:]:

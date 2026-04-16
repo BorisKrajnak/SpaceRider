@@ -235,7 +235,11 @@ def login_screen(screen, clock):
                     password_box.text
                 )
 
-                set_user(user)
+                set_user({
+                    "localId": user["localId"],
+                    "idToken": user["idToken"],
+                    "email": email_box.text
+                })
                 return True
 
             else:
@@ -254,7 +258,12 @@ def login_screen(screen, clock):
                         email_box.text,
                         password_box.text
                     )
-                    set_user(user)
+
+                    set_user({
+                        "localId": user["localId"],
+                        "idToken": user["idToken"],
+                        "email": email_box.text  # 👈 DÔLEŽITÉ
+                    })
                     return True
 
                 message = "Uspesne si sa zaregistroval!"

@@ -33,6 +33,7 @@ def draw_gradient_button(surface, rect, text, font, color1, color2):
     text_rect = text_surface.get_rect(center=rect.center)
     surface.blit(text_surface, text_rect)
 
+
 # Hudobné tlačidlo Mute / Unmute
 def draw_music_button(surface, rect, music_state):
     color1 = (50, 0, 70)
@@ -61,6 +62,7 @@ def draw_music_button(surface, rect, music_state):
             (rect.left + (rect.width - img.get_width()) // 2,
              rect.top + (rect.height - img.get_height()) // 2)
         )
+
 
 # HLAVNÁ FUNKCIA
 def run(screen):
@@ -97,6 +99,7 @@ def run(screen):
     button_width, button_height = 250, 75
     start_button = pygame.Rect(width - button_width - 40, height - button_height - 40, button_width, button_height)
     back_button = pygame.Rect(40, height - button_height - 40, button_width, button_height)
+    leaderboard_button = pygame.Rect(40, 40, 500, 75)  # 🔥 NOVÉ
     music_button_rect = pygame.Rect(width - 80, 20, 60, 60)
 
     control_rects = [pygame.Rect(0, 0, 0, 0) for _ in range(3)]
@@ -128,6 +131,7 @@ def run(screen):
         # --- Buttons ---
         draw_gradient_button(screen, start_button, "START", button_font, (50, 0, 70), (20, 0, 20))
         draw_gradient_button(screen, back_button, "BACK", button_font, (50, 0, 70), (20, 0, 20))
+        draw_gradient_button(screen, leaderboard_button, "LEADEARBOARD", button_font, (50, 0, 70), (20, 0, 20))  # 🔥 NOVÉ
 
         # --- Hudba ---
         draw_music_button(screen, music_button_rect, get_music_state())
@@ -139,7 +143,7 @@ def run(screen):
             (width // 2 - 110, height // 2 + 60),
         ]
 
-        # Vykreslenie výberu postáv (NOVÝ SYSTÉM)
+        # Vykreslenie výberu postáv
         for i, pos in enumerate(positions_ctrl):
             is_selected = selected_control == i
             original = control_images[i]
@@ -153,7 +157,6 @@ def run(screen):
                 rect = pygame.Rect(pos[0], pos[1], box_w, box_h)
                 img_scaled = scale_to_fit(original, box_w - 20, box_h - 20)
 
-            # rámček
             pygame.draw.rect(
                 screen,
                 (255, 255, 0) if is_selected else WHITE,
@@ -162,7 +165,6 @@ def run(screen):
                 border_radius=10
             )
 
-            # centrovanie obrázka
             img_rect = img_scaled.get_rect(center=rect.center)
             screen.blit(img_scaled, img_rect.topleft)
 
@@ -176,6 +178,9 @@ def run(screen):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if back_button.collidepoint(event.pos):
                     return GameState.MENU
+
+                if leaderboard_button.collidepoint(event.pos):  # 🔥 NOVÉ
+                    return GameState.LEADERBOARD
 
                 if music_button_rect.collidepoint(event.pos):
                     toggle_mute()

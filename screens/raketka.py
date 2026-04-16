@@ -9,7 +9,7 @@ from core.music_manager import set_volume, get_music_state, toggle_mute
 from core.game_state import GameState
 from core.vyber_pozadia import nacitaj_pozadie
 from core.score_manager import save_score
-
+from core.game_result import GameResult
 
 
 
@@ -420,8 +420,14 @@ def run(screen, map_image=None):
                                 json.dump({"skore": final_score, "cas": elapsed_time}, f, ensure_ascii=False, indent=2)
                         except Exception:
                             pass
-                        save_score("raketka", final_score, elapsed_time)
-                        return GameState.GAME_OVER
+                        is_best = save_score("raketka", final_score, elapsed_time)
+                        return GameResult(
+                            next_state=GameState.GAME_OVER,
+                            score=final_score,
+                            time=elapsed_time,
+                            is_best=is_best,
+                            game_name="raketka"
+                        )
 
         # fuel 0 -> koniec hry
         if fuel <= 0:
@@ -432,9 +438,14 @@ def run(screen, map_image=None):
                     json.dump({"skore": final_score, "cas": elapsed_time}, f, ensure_ascii=False, indent=2)
             except Exception:
                 pass
-            save_score("raketka", final_score, elapsed_time)
-            return GameState.GAME_OVER
-
+            is_best = save_score("raketka", final_score, elapsed_time)
+            return GameResult(
+                next_state=GameState.GAME_OVER,
+                score=final_score,
+                time=elapsed_time,
+                is_best=is_best,
+                game_name="raketka"
+            )
         # vykreslenie scény
         if background:
             screen.blit(background, (0,0))
