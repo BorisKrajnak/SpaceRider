@@ -1,4 +1,3 @@
-# screens/raketka.py
 import os
 import json
 import random
@@ -106,6 +105,53 @@ def draw_gradient_rect(surface, rect, color_top, color_bottom, radius=12):
 
     pygame.draw.rect(surface, (255, 255, 255), rect, width=2, border_radius=radius)
 
+
+def draw_pause_button(surface, rect):
+    color1 = (50, 0, 70)
+    color2 = (20, 0, 20)
+
+    gradient = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    for y in range(rect.height):
+        ratio = y / rect.height
+        r = int(color1[0] + (color2[0] - color1[0]) * ratio)
+        g = int(color1[1] + (color2[1] - color1[1]) * ratio)
+        b = int(color1[2] + (color2[2] - color1[2]) * ratio)
+        pygame.draw.line(gradient, (r, g, b, 220), (0, y), (rect.width, y))
+
+    surface.blit(gradient, rect.topleft)
+    pygame.draw.rect(surface, (255, 255, 255), rect, 3, border_radius=8)
+
+    cx, cy = rect.center
+    bar_w = 6
+    bar_h = rect.height // 2
+    spacing = 10
+
+    pygame.draw.rect(surface, (255,255,255), (cx - spacing, cy - bar_h//2, bar_w, bar_h))
+    pygame.draw.rect(surface, (255,255,255), (cx + spacing - bar_w, cy - bar_h//2, bar_w, bar_h))
+
+
+def draw_pause_menu(screen, width, height, font):
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+    overlay.fill((0,0,0,180))
+    screen.blit(overlay, (0,0))
+
+    btn_w, btn_h = 300, 70
+    center_x = width // 2 - btn_w // 2
+    start_y = height // 2 - 100
+
+    buttons = {
+        "resume": pygame.Rect(center_x, start_y, btn_w, btn_h),
+        "menu": pygame.Rect(center_x, start_y + 90, btn_w, btn_h),
+        "quit": pygame.Rect(center_x, start_y + 180, btn_w, btn_h)
+    }
+
+    for text, rect in buttons.items():
+        draw_gradient_rect(screen, rect, (100,0,120), (40,0,50))
+        label = font.render(text.upper(), True, (255,255,255))
+        screen.blit(label, (rect.centerx - label.get_width()//2,
+                            rect.centery - label.get_height()//2))
+
+    return buttons
 
 
 
@@ -228,6 +274,15 @@ def run(screen, map_image=None):
     unmute_icon_path = os.path.join(IMG_DIR, "unmute.png")
     mute_img = None
     unmute_img = None
+
+    pause_button_size = 60
+    pause_button_rect = pygame.Rect(
+        width - pause_button_size - 20,
+        height - pause_button_size - 20,
+        pause_button_size,
+        pause_button_size
+    )
+
     try:
         if os.path.exists(mute_icon_path):
             mute_img = pygame.image.load(mute_icon_path).convert_alpha()
@@ -260,6 +315,20 @@ def run(screen, map_image=None):
         y = random.randint(50, height - 50)
         return (x, y)
 
+    def toggle_pause():
+        nonlocal paused, pause_start_time, paused_time_total
+        paused = not paused
+
+        if paused:
+            pause_start_time = pygame.time.get_ticks()
+        else:
+            paused_time_total += pygame.time.get_ticks() - pause_start_time
+
+    paused = False
+    pause_start_time = 0
+    paused_time_total = 0
+    buttons = None
+
     # hlavný loop
     running = True
     while running:
@@ -278,16 +347,32 @@ def run(screen, map_image=None):
                     return GameState.MENU
                 if event.key == pygame.K_m:
                     toggle_mute()
+                if event.key == pygame.K_p:
+                    toggle_pause()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if music_button_rect.collidepoint(event.pos):
                     if event.button == 3:
                         set_volume(0.5)
                     else:
                         toggle_mute()
+                if pause_button_rect.collidepoint(event.pos):
+                    toggle_pause()
+                if paused and buttons:
+                    if buttons["resume"].collidepoint(event.pos):
+                        paused = False
+                        paused_time_total += pygame.time.get_ticks() - pause_start_time
+
+                    elif buttons["menu"].collidepoint(event.pos):
+                        return GameState.MENU
+
+                    elif buttons["quit"].collidepoint(event.pos):
+                        pygame.quit()
+                        return None
 
         # update herného času a score
-        elapsed_time = (pygame.time.get_ticks() - start_time) // 1000
-        score = meteory_obehol + elapsed_time
+        if not paused:
+            elapsed_time = (pygame.time.get_ticks() - start_time - paused_time_total) // 1000
+            score = meteory_obehol + elapsed_time
 
         # postupné zrýchľovanie
         if elapsed_time > 0 and elapsed_time % 5 == 0:
@@ -297,19 +382,20 @@ def run(screen, map_image=None):
 
         # pohyb hráča
         keys = pygame.key.get_pressed()
-        rotation_angle = 0
-        if keys[pygame.K_w]:
-            rotation_angle = +45
-            player_y -= PLAYER_SPEED
-        elif keys[pygame.K_s]:
-            rotation_angle = -45
-            player_y += PLAYER_SPEED
-        else:
+        if not paused:
             rotation_angle = 0
-        if keys[pygame.K_a]:
-            player_x -= PLAYER_SPEED
-        if keys[pygame.K_d]:
-            player_x += PLAYER_SPEED
+            if keys[pygame.K_w]:
+                rotation_angle = +45
+                player_y -= PLAYER_SPEED
+            elif keys[pygame.K_s]:
+                rotation_angle = -45
+                player_y += PLAYER_SPEED
+            else:
+                rotation_angle = 0
+            if keys[pygame.K_a]:
+                player_x -= PLAYER_SPEED
+            if keys[pygame.K_d]:
+                player_x += PLAYER_SPEED
 
         # hranice
         half_w = PLAYER_WIDTH // 2
@@ -326,126 +412,127 @@ def run(screen, map_image=None):
         frame_rect = rotated_frame.get_rect(center=(player_x, player_y))
         player_mask = pygame.mask.from_surface(rotated_frame)
 
-        # spawn meteorov
-        if pygame.time.get_ticks() - last_spawn_time > spawn_delay:
-            m = Meteor(meteor_image, width, height,
-                       min_size=meteory_velkost_min, max_size=meteory_velkost_max,
-                       base_speed=base_speed)
-            meteory.append(m)
-            last_spawn_time = pygame.time.get_ticks()
+        if not paused:
+            # spawn meteorov
+            if pygame.time.get_ticks() - last_spawn_time > spawn_delay:
+                m = Meteor(meteor_image, width, height,
+                           min_size=meteory_velkost_min, max_size=meteory_velkost_max,
+                           base_speed=base_speed)
+                meteory.append(m)
+                last_spawn_time = pygame.time.get_ticks()
 
-        # update fuel
-        fuel -= fuel_depletion_rate
-        fuel = max(fuel, 0)
+            # update fuel
+            fuel -= fuel_depletion_rate
+            fuel = max(fuel, 0)
 
-        # spawn fuel
-        now = pygame.time.get_ticks()
-        if fuel_pos is None and now - fuel_spawn_time > 13500:
-            fuel_pos = spawn_fuel()
-            fuel_spawn_time = now
-        elif fuel_pos is not None and now - fuel_spawn_time > fuel_duration:
-            fuel_pos = None
-
-        # --- spawn shield on map
-        if shield_spawn_pos is None and now - shield_spawn_time > shield_spawn_interval:
-            if len(hotbar_shields) < max_shields:
-                shield_spawn_pos = spawn_shield()
-            shield_spawn_time = now
-
-        if shield_spawn_pos is not None and now - shield_spawn_time > shield_duration_on_map:
-            shield_spawn_pos = None
-            shield_spawn_time = now
-
-        # --- spawn heart on map ---
-        if heart_spawn_pos is None and now - heart_spawn_time > heart_spawn_interval:
-            if lives < max_lives:
-                heart_spawn_pos = (random.randint(50, width - 50), random.randint(50, height - 50))
-            heart_spawn_time = now
-
-        elif heart_spawn_pos is not None and now - heart_spawn_time > heart_duration_on_map:
-            heart_spawn_pos = None
-            heart_spawn_time = now
-
-        # kolízie a logika
-        if fuel_pos is not None:
-            fuel_rect = pygame.Rect(fuel_pos[0], fuel_pos[1], fuel_size, fuel_size)
-            offset = (fuel_rect.left - frame_rect.left, fuel_rect.top - frame_rect.top)
-            fuel_mask = pygame.mask.from_surface(fuel_image)
-            if player_mask.overlap(fuel_mask, offset):
-                fuel = min(fuel + 30, 100)
+            # spawn fuel
+            now = pygame.time.get_ticks()
+            if fuel_pos is None and now - fuel_spawn_time > 13500:
+                fuel_pos = spawn_fuel()
+                fuel_spawn_time = now
+            elif fuel_pos is not None and now - fuel_spawn_time > fuel_duration:
                 fuel_pos = None
 
-        # shield pickup
-        if shield_spawn_pos is not None:
-            shield_rect = pygame.Rect(shield_spawn_pos[0], shield_spawn_pos[1], 50, 50)
-            offset_shield = (shield_rect.left - frame_rect.left, shield_rect.top - frame_rect.top)
-            if player_mask.overlap(pygame.mask.from_surface(shield_image), offset_shield):
+            # --- spawn shield on map
+            if shield_spawn_pos is None and now - shield_spawn_time > shield_spawn_interval:
                 if len(hotbar_shields) < max_shields:
-                    hotbar_shields.append(True)
+                    shield_spawn_pos = spawn_shield()
+                shield_spawn_time = now
+
+            if shield_spawn_pos is not None and now - shield_spawn_time > shield_duration_on_map:
                 shield_spawn_pos = None
                 shield_spawn_time = now
 
-        # heart pickup
-        if heart_spawn_pos is not None:
-            heart_rect = pygame.Rect(heart_spawn_pos[0], heart_spawn_pos[1], 55, 55)
-            offset_heart = (heart_rect.left - frame_rect.left, heart_rect.top - frame_rect.top)
-            if player_mask.overlap(pygame.mask.from_surface(heart_image), offset_heart):
+            # --- spawn heart on map ---
+            if heart_spawn_pos is None and now - heart_spawn_time > heart_spawn_interval:
                 if lives < max_lives:
-                    lives += 1
+                    heart_spawn_pos = (random.randint(50, width - 50), random.randint(50, height - 50))
+                heart_spawn_time = now
+
+            elif heart_spawn_pos is not None and now - heart_spawn_time > heart_duration_on_map:
                 heart_spawn_pos = None
                 heart_spawn_time = now
 
-        # update meteory list and collisions
-        for meteor in meteory[:]:
-            meteor.update()
-            if meteor.is_off_screen():
-                meteory.remove(meteor)
-                meteory_obehol += 1
-                continue
+            # kolízie a logika
+            if fuel_pos is not None:
+                fuel_rect = pygame.Rect(fuel_pos[0], fuel_pos[1], fuel_size, fuel_size)
+                offset = (fuel_rect.left - frame_rect.left, fuel_rect.top - frame_rect.top)
+                fuel_mask = pygame.mask.from_surface(fuel_image)
+                if player_mask.overlap(fuel_mask, offset):
+                    fuel = min(fuel + 30, 100)
+                    fuel_pos = None
 
-            if not shield_active:
-                offset = (meteor.rect.left - frame_rect.left, meteor.rect.top - frame_rect.top)
-                if player_mask.overlap(meteor.mask, offset):
+            # shield pickup
+            if shield_spawn_pos is not None:
+                shield_rect = pygame.Rect(shield_spawn_pos[0], shield_spawn_pos[1], 50, 50)
+                offset_shield = (shield_rect.left - frame_rect.left, shield_rect.top - frame_rect.top)
+                if player_mask.overlap(pygame.mask.from_surface(shield_image), offset_shield):
+                    if len(hotbar_shields) < max_shields:
+                        hotbar_shields.append(True)
+                    shield_spawn_pos = None
+                    shield_spawn_time = now
 
-                    if lives > 0:
-                        lives -= 1
-                        meteory.remove(meteor)
-                        continue
-                    else:
-                        final_score = meteory_obehol + elapsed_time
-                        # uloženie skóre
-                        skore_path = get_path("data", "skore.json")
-                        try:
-                            with open(skore_path, "w", encoding="utf-8") as f:
-                                json.dump({"skore": final_score, "cas": elapsed_time}, f, ensure_ascii=False, indent=2)
-                        except Exception:
-                            pass
-                        is_best = save_score("raketka", final_score, elapsed_time)
-                        return GameResult(
-                            next_state=GameState.GAME_OVER,
-                            score=final_score,
-                            time=elapsed_time,
-                            is_best=is_best,
-                            game_name="raketka"
-                        )
+            # heart pickup
+            if heart_spawn_pos is not None:
+                heart_rect = pygame.Rect(heart_spawn_pos[0], heart_spawn_pos[1], 55, 55)
+                offset_heart = (heart_rect.left - frame_rect.left, heart_rect.top - frame_rect.top)
+                if player_mask.overlap(pygame.mask.from_surface(heart_image), offset_heart):
+                    if lives < max_lives:
+                        lives += 1
+                    heart_spawn_pos = None
+                    heart_spawn_time = now
 
-        # fuel 0 -> koniec hry
-        if fuel <= 0:
-            final_score = meteory_obehol + elapsed_time
-            skore_path = get_path("data", "skore.json")
-            try:
-                with open(skore_path, "w", encoding="utf-8") as f:
-                    json.dump({"skore": final_score, "cas": elapsed_time}, f, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
-            is_best = save_score("raketka", final_score, elapsed_time)
-            return GameResult(
-                next_state=GameState.GAME_OVER,
-                score=final_score,
-                time=elapsed_time,
-                is_best=is_best,
-                game_name="raketka"
-            )
+            # update meteory list and collisions
+            for meteor in meteory[:]:
+                meteor.update()
+                if meteor.is_off_screen():
+                    meteory.remove(meteor)
+                    meteory_obehol += 1
+                    continue
+
+                if not shield_active:
+                    offset = (meteor.rect.left - frame_rect.left, meteor.rect.top - frame_rect.top)
+                    if player_mask.overlap(meteor.mask, offset):
+
+                        if lives > 0:
+                            lives -= 1
+                            meteory.remove(meteor)
+                            continue
+                        else:
+                            final_score = meteory_obehol + elapsed_time
+                            # uloženie skóre
+                            skore_path = get_path("data", "skore.json")
+                            try:
+                                with open(skore_path, "w", encoding="utf-8") as f:
+                                    json.dump({"skore": final_score, "cas": elapsed_time}, f, ensure_ascii=False, indent=2)
+                            except Exception:
+                                pass
+                            is_best = save_score("raketka", final_score, elapsed_time)
+                            return GameResult(
+                                next_state=GameState.GAME_OVER,
+                                score=final_score,
+                                time=elapsed_time,
+                                is_best=is_best,
+                                game_name="raketka"
+                            )
+
+            # fuel 0 -> koniec hry
+            if fuel <= 0:
+                final_score = meteory_obehol + elapsed_time
+                skore_path = get_path("data", "skore.json")
+                try:
+                    with open(skore_path, "w", encoding="utf-8") as f:
+                        json.dump({"skore": final_score, "cas": elapsed_time}, f, ensure_ascii=False, indent=2)
+                except Exception:
+                    pass
+                is_best = save_score("raketka", final_score, elapsed_time)
+                return GameResult(
+                    next_state=GameState.GAME_OVER,
+                    score=final_score,
+                    time=elapsed_time,
+                    is_best=is_best,
+                    game_name="raketka"
+                )
         # vykreslenie scény
         if background:
             screen.blit(background, (0,0))
@@ -547,6 +634,12 @@ def run(screen, map_image=None):
         music_state = get_music_state()
         draw_music_button(screen, music_button_rect, music_state, mute_img if mute_img else mute_icon_path, unmute_img if unmute_img else unmute_icon_path)
 
+        draw_pause_button(screen, pause_button_rect)
+
+        if paused:
+            buttons = draw_pause_menu(screen, width, height, font)
+
+
         # fuel bar
         fuel_bar_pos = (20, 120)
         fuel_bar_size = (300, 25)
@@ -562,7 +655,7 @@ def run(screen, map_image=None):
         pygame.draw.rect(screen, (255,255,255), (*fuel_bar_pos, *fuel_bar_size), 2)
 
         pygame.display.flip()
-        clock.tick(60)
+        pygame.time.Clock().tick(60)
 
     # fallback
     return GameState.MENU
@@ -574,3 +667,4 @@ if __name__ == "__main__":
     res = run(screen)
     print("Returned state:", res)
     pygame.quit()
+

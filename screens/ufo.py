@@ -101,6 +101,52 @@ def draw_gradient_rect(surface, rect, color_top, color_bottom, radius=12):
     surface.blit(gradient, (x, y))
     pygame.draw.rect(surface, (255, 255, 255), rect, 2, border_radius=radius)
 
+def draw_pause_button(surface, rect):
+    color1 = (50, 0, 70)
+    color2 = (20, 0, 20)
+
+    gradient = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    for y in range(rect.height):
+        ratio = y / rect.height
+        r = int(color1[0] + (color2[0] - color1[0]) * ratio)
+        g = int(color1[1] + (color2[1] - color1[1]) * ratio)
+        b = int(color1[2] + (color2[2] - color1[2]) * ratio)
+        pygame.draw.line(gradient, (r, g, b, 220), (0, y), (rect.width, y))
+
+    surface.blit(gradient, rect.topleft)
+    pygame.draw.rect(surface, (255, 255, 255), rect, 3, border_radius=8)
+
+    cx, cy = rect.center
+    bar_w = 6
+    bar_h = rect.height // 2
+    spacing = 10
+
+    pygame.draw.rect(surface, (255,255,255), (cx - spacing, cy - bar_h//2, bar_w, bar_h))
+    pygame.draw.rect(surface, (255,255,255), (cx + spacing - bar_w, cy - bar_h//2, bar_w, bar_h))
+
+
+def draw_pause_menu(screen, width, height, font):
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+    overlay.fill((0,0,0,180))
+    screen.blit(overlay, (0,0))
+
+    btn_w, btn_h = 300, 70
+    center_x = width // 2 - btn_w // 2
+    start_y = height // 2 - 100
+
+    buttons = {
+        "resume": pygame.Rect(center_x, start_y, btn_w, btn_h),
+        "menu": pygame.Rect(center_x, start_y + 90, btn_w, btn_h),
+        "quit": pygame.Rect(center_x, start_y + 180, btn_w, btn_h)
+    }
+
+    for text, rect in buttons.items():
+        draw_gradient_rect(screen, rect, (100,0,120), (40,0,50))
+        label = font.render(text.upper(), True, (255,255,255))
+        screen.blit(label, (rect.centerx - label.get_width()//2,
+                            rect.centery - label.get_height()//2))
+
+    return buttons
 
 # --- Triedy pre objekty ---
 class Barrel:
@@ -189,7 +235,9 @@ class PlayerUFO:
         self.shield_start = 0
         self.shield_duration = 10000
         base = max(self.width, self.height)
-        self.shield_radius = int(base * 1.0)  # pevná veľkosť štítu
+        self.shield_radius = int(base * 1.0)
+        self.shield_pause_total = 0
+        self.shield_pause_start = 0
 
     def update_anim(self):
         now = pygame.time.get_ticks()
@@ -223,10 +271,17 @@ class PlayerUFO:
         self.shield_active = True
         self.shield_start = pygame.time.get_ticks()
 
-    def update_shield(self):
-        if self.shield_active and (pygame.time.get_ticks() - self.shield_start > self.shield_duration):
-            self.shield_active = False
+    def update_shield(self, paused=False):
+        if not self.shield_active:
+            return
 
+        if paused:
+            return
+
+        real_time = pygame.time.get_ticks() - self.shield_start - self.shield_pause_total
+
+        if real_time > self.shield_duration:
+            self.shield_active = False
 # ---------------------------------------------------------
 #  run(screen) — hlavný modul (vráti GameState)
 # ---------------------------------------------------------
@@ -240,6 +295,14 @@ def run(screen):
     music_size = 60
     music_button_rect = pygame.Rect(width - music_size - 20, 20, music_size, music_size)
     music_state = get_music_state()
+
+    pause_button_size = 60
+    pause_button_rect = pygame.Rect(
+        width - pause_button_size - 20,
+        height - pause_button_size - 20,
+        pause_button_size,
+        pause_button_size
+    )
 
     # načítanie background podľa configu
     config_path = get_path("data", "game_config.json")
@@ -338,25 +401,45 @@ def run(screen):
     except Exception:
         best_score = 0
 
+    paused = False
+    pause_start_time = 0
+    paused_time_total = 0
+    buttons = None
+
     running = True
     while running:
         now = pygame.time.get_ticks()
-        elapsed_time = (now - start_time) // 1000
+        if not paused:
+            elapsed_time = (now - start_time - paused_time_total) // 1000
         current_score = meteory_prelietane + elapsed_time
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return None
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     return GameState.MENU
 
-                if event.key == pygame.K_w:
-                    player.flap()
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_p:
+                        paused = not paused
+                        if paused:
+                            pause_start_time = pygame.time.get_ticks()
+                            if player.shield_active:
+                                player.shield_pause_start = pygame.time.get_ticks()
+                        else:
+                            paused_time_total += pygame.time.get_ticks() - pause_start_time
+                            if player.shield_active:
+                                player.shield_pause_total += pygame.time.get_ticks() - player.shield_pause_start
 
-                if event.key == pygame.K_e and shield_icons and not player.shield_active:
-                    shield_icons.pop()
-                    player.activate_shield()
+                if not paused:
+                    if event.key == pygame.K_w:
+                        player.flap()
+
+                    if event.key == pygame.K_e and shield_icons and not player.shield_active:
+                        shield_icons.pop()
+                        player.activate_shield()
 
                 if event.key == pygame.K_m:
                     toggle_mute()
@@ -366,78 +449,54 @@ def run(screen):
                 if music_button_rect.collidepoint(event.pos):
                     toggle_mute()
                     music_state = get_music_state()
+                if pause_button_rect.collidepoint(event.pos):
+                    paused = not paused
+                    if paused:
+                        pause_start_time = pygame.time.get_ticks()
+                        if player.shield_active:
+                            player.shield_pause_start = pygame.time.get_ticks()
+                    else:
+                        paused_time_total += pygame.time.get_ticks() - pause_start_time
+                        if player.shield_active:
+                            player.shield_pause_total += pygame.time.get_ticks() - player.shield_pause_start
+
+                if paused and buttons:
+                    if buttons["resume"].collidepoint(event.pos):
+                        paused = False
+                        paused_time_total += pygame.time.get_ticks() - pause_start_time
+
+                    if buttons["menu"].collidepoint(event.pos):
+                        return GameState.MENU
+
+                    if buttons["quit"].collidepoint(event.pos):
+                        pygame.quit()
+                        exit()
 
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_a]:
-            player.x -= player.move_speed
-        if keys[pygame.K_d]:
-            player.x += player.move_speed
+        if not paused:
+            if keys[pygame.K_a]:
+                player.x -= player.move_speed
+            if keys[pygame.K_d]:
+                player.x += player.move_speed
 
-        # apply physics
-        player.apply_physics()
-        player.update_anim()
-        player.update_shield()
+        if not paused:
 
-        # clamp player to screen
-        player.x = max(0, min(player.x, width - player.width))
-        player.y = max(0, min(player.y, height - player.height))
-        if player.y >= height - player.height:
-            player.speed_y = 0
+            # apply physics
+            player.apply_physics()
+            player.update_anim()
+            player.update_shield(paused)
 
-        # fuel depletion
-        if now - last_fuel_update > 100:
-            fuel -= fuel_depletion_rate
-            last_fuel_update = now
-            if fuel <= 0:
-                return GameResult(
-                    next_state=GameState.GAME_OVER,
-                    score=current_score,
-                    time=elapsed_time,
-                    is_best=save_score("ufo", current_score, elapsed_time),
-                    game_name="ufo"
-                )
+            # clamp player to screen
+            player.x = max(0, min(player.x, width - player.width))
+            player.y = max(0, min(player.y, height - player.height))
+            if player.y >= height - player.height:
+                player.speed_y = 0
 
-        # spawn meteors
-        if now - last_spawn > max(300, spawn_delay - (elapsed_time * 10)):
-            meteors.append(Meteor(width, height, meteor_img, 1 + (elapsed_time//30)*0.2))
-            last_spawn = now
-
-        # spawn barrel (fuel)
-        if now - last_barrel_spawn > 10000:
-            barrels.append(Barrel(width, height, barrel_img))
-            last_barrel_spawn = now
-
-        # spawn shield pickup
-        if now - last_shield_spawn > 20000:
-            shields.append(ShieldPickup(width, height, shield_img))
-            last_shield_spawn = now
-
-        # spawn heart pickup
-        if now - last_heart_spawn > 25000:
-            hearts.append(HeartPickup(width, height, heart_img))
-            last_heart_spawn = now
-
-        # update meteors and collisions
-        for m in meteors[:]:
-            m.update()
-            if m.is_off_screen():
-                meteors.remove(m)
-                meteory_prelietane += 1
-                continue
-            player_frame = player.frames[player.frame_index]
-            player_rect = player_frame.get_rect(topleft=(int(player.x), int(player.y)))
-            player_mask = pygame.mask.from_surface(player_frame)
-            if not player.shield_active:
-                offset = (int(m.rect.x - player_rect.left), int(m.rect.y - player_rect.top))
-                if player_mask.overlap(m.mask, offset):
-                    # if have hearts -> remove heart instead of dying
-                    if heart_icons:
-                        heart_icons.pop()
-                        try:
-                            meteors.remove(m)
-                        except ValueError:
-                            pass
-                        continue
+            # fuel depletion
+            if now - last_fuel_update > 100:
+                fuel -= fuel_depletion_rate
+                last_fuel_update = now
+                if fuel <= 0:
                     return GameResult(
                         next_state=GameState.GAME_OVER,
                         score=current_score,
@@ -446,58 +505,107 @@ def run(screen):
                         game_name="ufo"
                     )
 
-        # barrels collisions
-        for b in barrels[:]:
-            b.update()
-            if b.is_off_screen():
-                barrels.remove(b)
-                continue
-            player_frame = player.frames[player.frame_index]
-            player_rect = player_frame.get_rect(topleft=(int(player.x), int(player.y)))
-            player_mask = pygame.mask.from_surface(player_frame)
-            offset = (int(b.rect.x - player_rect.left), int(b.rect.y - player_rect.top))
-            if player_mask.overlap(b.mask, offset):
-                fuel = min(max_fuel, fuel + 15)
-                try:
+            # spawn meteors
+            if now - last_spawn > max(300, spawn_delay - (elapsed_time * 10)):
+                meteors.append(Meteor(width, height, meteor_img, 1 + (elapsed_time//30)*0.2))
+                last_spawn = now
+
+            # spawn barrel (fuel)
+            if now - last_barrel_spawn > 10000:
+                barrels.append(Barrel(width, height, barrel_img))
+                last_barrel_spawn = now
+
+            # spawn shield pickup
+            if now - last_shield_spawn > 20000:
+                shields.append(ShieldPickup(width, height, shield_img))
+                last_shield_spawn = now
+
+            # spawn heart pickup
+            if now - last_heart_spawn > 25000:
+                hearts.append(HeartPickup(width, height, heart_img))
+                last_heart_spawn = now
+
+            # update meteors and collisions
+            for m in meteors[:]:
+                m.update()
+                if m.is_off_screen():
+                    meteors.remove(m)
+                    meteory_prelietane += 1
+                    continue
+                player_frame = player.frames[player.frame_index]
+                player_rect = player_frame.get_rect(topleft=(int(player.x), int(player.y)))
+                player_mask = pygame.mask.from_surface(player_frame)
+                if not player.shield_active:
+                    offset = (int(m.rect.x - player_rect.left), int(m.rect.y - player_rect.top))
+                    if player_mask.overlap(m.mask, offset):
+                        # if have hearts -> remove heart instead of dying
+                        if heart_icons:
+                            heart_icons.pop()
+                            try:
+                                meteors.remove(m)
+                            except ValueError:
+                                pass
+                            continue
+                        return GameResult(
+                            next_state=GameState.GAME_OVER,
+                            score=current_score,
+                            time=elapsed_time,
+                            is_best=save_score("ufo", current_score, elapsed_time),
+                            game_name="ufo"
+                        )
+
+            # barrels collisions
+            for b in barrels[:]:
+                b.update()
+                if b.is_off_screen():
                     barrels.remove(b)
-                except ValueError:
-                    pass
+                    continue
+                player_frame = player.frames[player.frame_index]
+                player_rect = player_frame.get_rect(topleft=(int(player.x), int(player.y)))
+                player_mask = pygame.mask.from_surface(player_frame)
+                offset = (int(b.rect.x - player_rect.left), int(b.rect.y - player_rect.top))
+                if player_mask.overlap(b.mask, offset):
+                    fuel = min(max_fuel, fuel + 15)
+                    try:
+                        barrels.remove(b)
+                    except ValueError:
+                        pass
 
-        # shield pickups collisions
-        for s in shields[:]:
-            s.update()
-            if s.is_off_screen():
-                shields.remove(s)
-                continue
-            player_frame = player.frames[player.frame_index]
-            player_rect = player_frame.get_rect(topleft=(int(player.x), int(player.y)))
-            player_mask = pygame.mask.from_surface(player_frame)
-            offset = (int(s.rect.x - player_rect.left), int(s.rect.y - player_rect.top))
-            if player_mask.overlap(s.mask, offset):
-                if len(shield_icons) < max_shields:
-                    shield_icons.append(True)
-                try:
+            # shield pickups collisions
+            for s in shields[:]:
+                s.update()
+                if s.is_off_screen():
                     shields.remove(s)
-                except ValueError:
-                    pass
+                    continue
+                player_frame = player.frames[player.frame_index]
+                player_rect = player_frame.get_rect(topleft=(int(player.x), int(player.y)))
+                player_mask = pygame.mask.from_surface(player_frame)
+                offset = (int(s.rect.x - player_rect.left), int(s.rect.y - player_rect.top))
+                if player_mask.overlap(s.mask, offset):
+                    if len(shield_icons) < max_shields:
+                        shield_icons.append(True)
+                    try:
+                        shields.remove(s)
+                    except ValueError:
+                        pass
 
-        # heart pickups collisions
-        for h in hearts[:]:
-            h.update()
-            if h.is_off_screen():
-                hearts.remove(h)
-                continue
-            player_frame = player.frames[player.frame_index]
-            player_rect = player_frame.get_rect(topleft=(int(player.x), int(player.y)))
-            player_mask = pygame.mask.from_surface(player_frame)
-            offset = (int(h.rect.x - player_rect.left), int(h.rect.y - player_rect.top))
-            if player_mask.overlap(h.mask, offset):
-                if len(heart_icons) < max_hearts:
-                    heart_icons.append(True)
-                try:
+            # heart pickups collisions
+            for h in hearts[:]:
+                h.update()
+                if h.is_off_screen():
                     hearts.remove(h)
-                except ValueError:
-                    pass
+                    continue
+                player_frame = player.frames[player.frame_index]
+                player_rect = player_frame.get_rect(topleft=(int(player.x), int(player.y)))
+                player_mask = pygame.mask.from_surface(player_frame)
+                offset = (int(h.rect.x - player_rect.left), int(h.rect.y - player_rect.top))
+                if player_mask.overlap(h.mask, offset):
+                    if len(heart_icons) < max_hearts:
+                        heart_icons.append(True)
+                    try:
+                        hearts.remove(h)
+                    except ValueError:
+                        pass
 
         # ----------------- RENDER -----------------
         if background:
@@ -543,9 +651,9 @@ def run(screen):
             slot_rect = pygame.Rect(hotbar_x + i * (hotbar_slot_size + hotbar_spacing),
                                     heart_y, hotbar_slot_size, hotbar_slot_size)
             draw_gradient_rect(screen, slot_rect,
-                               color_top=(100, 0, 110),
-                               color_bottom=(40, 0, 45),
-                               radius=12)
+                                color_top=(100, 0, 110),
+                                color_bottom=(40, 0, 45),
+                                radius=12)
             heart_scaled = pygame.transform.scale(heart_img, (hotbar_slot_size - 12, hotbar_slot_size - 12))
             screen.blit(heart_scaled, (slot_rect.x + 6, slot_rect.y + 6))
 
@@ -555,33 +663,39 @@ def run(screen):
             slot_rect = pygame.Rect(hotbar_x + i * (hotbar_slot_size + hotbar_spacing),
                                     shield_y, hotbar_slot_size, hotbar_slot_size)
             draw_gradient_rect(screen, slot_rect,
-                               color_top=(100, 0, 110),
-                               color_bottom=(40, 0, 45),
-                               radius=12)
+                                color_top=(100, 0, 110),
+                                color_bottom=(40, 0, 45),
+                                radius=12)
             shield_scaled = pygame.transform.scale(shield_img, (hotbar_slot_size - 12, hotbar_slot_size - 12))
             screen.blit(shield_scaled, (slot_rect.x + 6, slot_rect.y + 6))
 
         # --- shield status bar ---
         if player.shield_active:
+            effective_time = pygame.time.get_ticks() - player.shield_pause_total
+
             remaining_ratio = max(0, (
-                        player.shield_start + player.shield_duration - pygame.time.get_ticks()) / player.shield_duration)
+                    player.shield_start + player.shield_duration - effective_time
+            ) / player.shield_duration)
             bar_width = 200
             bar_height = 25
             x = width // 2 - bar_width // 2
             y = 30
+            if not paused:
+                # pozadie pruhu (tmavá modrá)
+                pygame.draw.rect(screen, (20, 40, 100), (x, y, bar_width, bar_height))
 
-            # pozadie pruhu (tmavá modrá)
-            pygame.draw.rect(screen, (20, 40, 100), (x, y, bar_width, bar_height))
+                # fill pruhu (svetlejšia modrá podľa zostávajúceho štítu)
+                fill_width = int(bar_width * remaining_ratio)
+                pygame.draw.rect(screen, (0, 170, 255), (x, y, fill_width, bar_height))
 
-            # fill pruhu (svetlejšia modrá podľa zostávajúceho štítu)
-            fill_width = int(bar_width * remaining_ratio)
-            pygame.draw.rect(screen, (0, 170, 255), (x, y, fill_width, bar_height))
+                # orámovanie
+                pygame.draw.rect(screen, (255, 255, 255), (x, y, bar_width, bar_height), 3)
 
-            # orámovanie
-            pygame.draw.rect(screen, (255, 255, 255), (x, y, bar_width, bar_height), 3)
+
 
         music_button_size = 60
         music_button_rect = pygame.Rect(width - music_button_size - 20, 20, music_button_size, music_button_size)
+
 
         mute_icon_path = os.path.join(IMG_DIR, "mute.png")
         unmute_icon_path = os.path.join(IMG_DIR, "unmute.png")
@@ -609,7 +723,13 @@ def run(screen):
 
         music_state = get_music_state()
         draw_music_button(screen, music_button_rect, music_state, mute_img if mute_img else mute_icon_path,
-                              unmute_img if unmute_img else unmute_icon_path)
+                                unmute_img if unmute_img else unmute_icon_path)
+
+
+        draw_pause_button(screen, pause_button_rect)
+
+        if paused:
+            buttons = draw_pause_menu(screen, width, height, font)
 
         pygame.display.flip()
         clock.tick(60)
