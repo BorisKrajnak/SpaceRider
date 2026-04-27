@@ -23,6 +23,11 @@ def _get_local_file(game_name, best=False):
     return os.path.join(LOCAL_DIR, filename)
 
 
+# ------------------------- GAME RULE -------------------------
+def is_min_game(game_name):
+    return game_name == "school"
+
+
 # ------------------------- SCORE SAVE -------------------------
 def save_score(game_name, score, cas=0):
     user = auth.current_user
@@ -31,7 +36,6 @@ def save_score(game_name, score, cas=0):
     local_file = _get_local_file(game_name)
     data = {"skore": score, "cas": cas}
 
-    # LOCAL SAVE
     try:
         with open(local_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
@@ -45,17 +49,19 @@ def save_score(game_name, score, cas=0):
         uid = user["localId"]
         path = f"/users/{uid}/scores/{game_name}"
 
-        ref = db.child(path).get().val() or {}
+        ref = db.child(path).get().val()
+        if not ref:
+            ref = {}
 
-        old_best = ref.get("best", 999999)
+        old_best = ref.get("best")
 
-        # SCHOOL = lower is better
-        if game_name == "school":
+        if old_best is None:
+            old_best = float("inf") if is_min_game(game_name) else 0
+
+        if is_min_game(game_name):
             if score < old_best:
                 is_new_best = True
             new_best = min(old_best, score)
-
-        # OTHER GAMES = higher is better
         else:
             if score > old_best:
                 is_new_best = True
@@ -69,8 +75,7 @@ def save_score(game_name, score, cas=0):
             "cas": cas,
             "best": new_best,
             "email": email,
-            "name": name,
-            "average": score
+            "name": name
         })
 
         return is_new_best
@@ -82,8 +87,9 @@ def save_score(game_name, score, cas=0):
 
 # ------------------------- BEST SCORE -------------------------
 def load_best(game_name="raketka"):
-    best = 0
     user = auth.current_user
+
+    best = float("inf") if is_min_game(game_name) else 0
 
     if user:
         try:
@@ -93,21 +99,15 @@ def load_best(game_name="raketka"):
 
             if data and "best" in data:
                 best = data["best"]
-        except:
-            pass
 
-    try:
-        with open(_get_local_file(game_name, best=True), "r", encoding="utf-8") as f:
-            data = json.load(f)
-            best = max(best, data.get("best", 0))
-    except:
-        pass
+        except Exception as e:
+            print("load_best firebase error:", e)
 
     return best
 
 
-# ------------------------- LEADERBOARD FIXED -------------------------
-def get_leaderboard(game_name="raketka", limit=10):
+# ------------------------- LEADERBOARD -------------------------
+def get_leaderboard(game_name="raketka"):
     try:
         users = db.child("users").get().val()
         if not users:
@@ -119,27 +119,24 @@ def get_leaderboard(game_name="raketka", limit=10):
             scores = user_data.get("scores", {})
             game_data = scores.get(game_name, {})
 
-            value = game_data.get("best", None)
+            value = game_data.get("best")
             if value is None:
                 continue
 
-            name = game_data.get("name")
-            if not name:
-                email = user_data.get("email", "")
-                name = email.split("@")[0] if "@" in email else f"Player_{uid[:6]}"
+            email = user_data.get("email", "")
+            name = game_data.get("name") or email.split("@")[0]
 
             leaderboard.append({
                 "name": name,
                 "score": value
             })
 
-        # 🔥 FIX: different sorting per game
-        if game_name == "school":
-            leaderboard.sort(key=lambda x: x["score"])  # lowest = best
+        if is_min_game(game_name):
+            leaderboard.sort(key=lambda x: x["score"])
         else:
             leaderboard.sort(key=lambda x: x["score"], reverse=True)
 
-        return leaderboard[:limit]
+        return leaderboard
 
     except Exception as e:
         print("Leaderboard load failed:", e)

@@ -61,6 +61,11 @@ class InputBox:
 
         self.txt_surface = self.font.render('', True, WHITE)
 
+    def reset(self):
+        self.text = ""
+        self.cursor_pos = 0
+        self.update_surface()
+
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             self.active = self.rect.collidepoint(event.pos)
@@ -102,20 +107,26 @@ class InputBox:
             if event.unicode == "" or event.unicode == "\x08":
                 return
 
+            if len(event.unicode) == 1 and event.unicode.isprintable():
+                if self.cursor_pos > len(self.text):
+                    self.cursor_pos = len(self.text)
 
-            self.text = self.text[:self.cursor_pos] + event.unicode + self.text[self.cursor_pos:]
-            self.cursor_pos += 1
-            self.update_surface()
+                self.text = (
+                        self.text[:self.cursor_pos] +
+                        event.unicode +
+                        self.text[self.cursor_pos:]
+                )
 
+                self.cursor_pos += 1
+                self.update_surface()
     def update_surface(self):
         if self.is_password and not self.show_text:
             display = "*" * len(self.text)
         else:
             display = self.text
 
-
         if display == "":
-            display = " "
+            display = ""
 
         self.txt_surface = self.font.render(display, True, WHITE)
 
@@ -151,9 +162,13 @@ class InputBox:
             screen.blit(self.txt_surface, (text_x, text_y))
             if self.cursor_visible and self.active:
                 if self.is_password and not self.show_text:
-                    cursor_x = text_x + self.font.size("*" * self.cursor_pos)[0]
+                    display_text = "*" * self.cursor_pos
                 else:
-                    cursor_x = text_x + self.font.size(self.text[:self.cursor_pos])[0]
+                    display_text = self.text[:self.cursor_pos]
+
+                cursor_surface = self.font.render(display_text, True, WHITE)
+                cursor_x = text_x + cursor_surface.get_width()
+
 
                 pygame.draw.line(
                     screen, WHITE,
@@ -228,73 +243,84 @@ def login_screen(screen, clock):
         message = ""
         message_color = RED_TEXT
 
+        email = email_box.text.strip()
+        password = password_box.text
+
+        # ---------------- VALIDÁCIA ----------------
+        if "@" not in email or "." not in email:
+            message = "Neplatny email!"
+            email_box.reset()
+            password_box.reset()
+            confirm_box.reset()
+            return False
+
+        if mode == "register":
+            if password != confirm_box.text:
+                message = "Hesla sa nezhoduju!"
+                email_box.reset()
+                password_box.reset()
+                confirm_box.reset()
+                return False
+
+            if len(password) < 6:
+                message = "Heslo musi mat aspon 6 znakov!"
+                email_box.reset()
+                password_box.reset()
+                confirm_box.reset()
+                return False
+
+        # ---------------- FIREBASE ----------------
         try:
             if mode == "login":
-                user = auth.sign_in_with_email_and_password(
-                    email_box.text,
-                    password_box.text
-                )
+                user = auth.sign_in_with_email_and_password(email, password)
 
                 set_user({
                     "localId": user["localId"],
                     "idToken": user["idToken"],
-                    "email": email_box.text
+                    "email": email
                 })
                 return True
 
             else:
-                if password_box.text != confirm_box.text:
-                    message = "Hesla sa nezhoduju!"
-                    message_color = RED_TEXT
-                    return False
-
-                auth.create_user_with_email_and_password(
-                    email_box.text,
-                    password_box.text
-                )
+                auth.create_user_with_email_and_password(email, password)
 
                 if auto_login_checked:
-                    user = auth.sign_in_with_email_and_password(
-                        email_box.text,
-                        password_box.text
-                    )
+                    user = auth.sign_in_with_email_and_password(email, password)
 
                     set_user({
                         "localId": user["localId"],
                         "idToken": user["idToken"],
-                        "email": email_box.text  # 👈 DÔLEŽITÉ
+                        "email": email
                     })
                     return True
 
-                message = "Uspesne si sa zaregistroval!"
+                message = "Uspesna registracia!"
                 message_color = SUCCESS_TEXT
 
                 mode = "login"
-                email_box.text = ""
-                password_box.text = ""
-                confirm_box.text = ""
-                email_box.cursor_pos = 0
-                password_box.cursor_pos = 0
-                confirm_box.cursor_pos = 0
-                email_box.update_surface()
-                password_box.update_surface()
-                confirm_box.update_surface()
+                email_box.reset()
+                password_box.reset()
+                confirm_box.reset()
+
                 return False
 
         except Exception as e:
+            email_box.reset()
+            password_box.reset()
+            confirm_box.reset()
+
             err_str = str(e)
-            message_color = RED_TEXT
 
             if "EMAIL_EXISTS" in err_str:
                 message = "Email uz existuje!"
             elif "INVALID_EMAIL" in err_str:
                 message = "Neplatny email!"
             elif "INVALID_PASSWORD" in err_str or "EMAIL_NOT_FOUND" in err_str:
-                message = "Chybny email alebo heslo!"
+                message = "Zly email alebo heslo!"
             elif "MISSING_PASSWORD" in err_str:
                 message = "Zadaj heslo!"
             else:
-                message = "Chyba prihlasenia/registracie!"
+                message = "Chyba servera!"
 
             return False
 
