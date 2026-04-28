@@ -479,11 +479,14 @@ def run(screen):
             if keys[pygame.K_d]:
                 player.x += player.move_speed
 
+
+        player.update_anim()
+
         if not paused:
 
             # apply physics
             player.apply_physics()
-            player.update_anim()
+            #player.update_anim()
             player.update_shield(paused)
 
             # clamp player to screen
