@@ -218,6 +218,14 @@ def run(screen, map_image=None):
             return surf
         return None
 
+    paused = False
+    pause_start_time = 0
+    paused_time_total = 0
+    buttons = None
+
+    def get_game_time():
+        return pygame.time.get_ticks() - paused_time_total
+
     star_img = load_asset("doplnky","star.png", size=(45,45)) or pygame.Surface((45,45))
     time_img = load_asset("doplnky","time.png", size=(45,45)) or pygame.Surface((45,45))
     shield_image = load_asset("doplnky","shield.png", size=(60,60)) or pygame.Surface((60,60))
@@ -226,13 +234,13 @@ def run(screen, map_image=None):
     # herné premenné
     player_x, player_y = width // 2, height // 2
     current_frame = 0
-    last_frame_time = pygame.time.get_ticks()
+    last_frame_time = get_game_time()
 
     meteory = []
     spawn_delay = 1200
-    last_spawn_time = pygame.time.get_ticks()
+    last_spawn_time = get_game_time()
 
-    start_time = pygame.time.get_ticks()
+    start_time = get_game_time()
     meteory_obehol = 0
 
     base_speed = 3.0
@@ -245,20 +253,20 @@ def run(screen, map_image=None):
     fuel_depletion_rate = 0.04
     fuel_pos = None
     fuel_size = 60
-    fuel_spawn_time = 0
+    fuel_spawn_time = get_game_time()
     fuel_duration = 5000
 
     # --- HEART POWERUP (extra životy) ---
     heart_image = load_asset("doplnky", "heart.png", size=(55, 55)) or pygame.Surface((55, 55))
     heart_spawn_pos = None
-    heart_spawn_time = pygame.time.get_ticks()
+    heart_spawn_time = get_game_time()
     heart_spawn_interval = random.randint(3500, 5000)
     heart_duration_on_map = 5000
     lives = 0
     max_lives = 3
 
     shield_spawn_pos = None
-    shield_spawn_time = pygame.time.get_ticks()
+    shield_spawn_time = get_game_time()
     shield_spawn_interval = random.randint(3000, 4000)
     shield_duration_on_map = 5000
     hotbar_shields = []
@@ -316,18 +324,16 @@ def run(screen, map_image=None):
         return (x, y)
 
     def toggle_pause():
-        nonlocal paused, pause_start_time, paused_time_total
+        nonlocal paused, pause_start_time, paused_time_total, last_spawn_time
+
         paused = not paused
 
         if paused:
             pause_start_time = pygame.time.get_ticks()
         else:
             paused_time_total += pygame.time.get_ticks() - pause_start_time
+            last_spawn_time = get_game_time()
 
-    paused = False
-    pause_start_time = 0
-    paused_time_total = 0
-    buttons = None
 
     # hlavný loop
     running = True
@@ -338,9 +344,9 @@ def run(screen, map_image=None):
                 return None
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
-                    if len(hotbar_shields) > 0 and not shield_active:
+                    if not paused and len(hotbar_shields) > 0 and not shield_active:
                         shield_active = True
-                        shield_active_start = pygame.time.get_ticks()
+                        shield_active_start = get_game_time()
                         shield_end_time = shield_active_start + shield_active_duration
                         hotbar_shields.pop(0)
                 if event.key == pygame.K_ESCAPE:
@@ -360,7 +366,7 @@ def run(screen, map_image=None):
                 if paused and buttons:
                     if buttons["resume"].collidepoint(event.pos):
                         paused = False
-                        paused_time_total += pygame.time.get_ticks() - pause_start_time
+                        paused_time_total += get_game_time() - pause_start_time
 
                     elif buttons["menu"].collidepoint(event.pos):
                         return GameState.MENU
@@ -371,7 +377,7 @@ def run(screen, map_image=None):
 
         # update herného času a score
         if not paused:
-            elapsed_time = (pygame.time.get_ticks() - start_time - paused_time_total) // 1000
+            elapsed_time = (get_game_time() - start_time ) // 1000
             score = meteory_obehol + elapsed_time
 
         # postupné zrýchľovanie
@@ -404,9 +410,9 @@ def run(screen, map_image=None):
         player_y = max(half_h - 30, min(player_y, height - half_h + 30))
 
         # animácia hráča
-        if pygame.time.get_ticks() - last_frame_time > FRAME_RATE_MS:
+        if get_game_time() - last_frame_time > FRAME_RATE_MS:
             current_frame = (current_frame + 1) % len(player_frames)
-            last_frame_time = pygame.time.get_ticks()
+            last_frame_time = get_game_time()
 
         rotated_frame = pygame.transform.rotate(player_frames[current_frame], rotation_angle)
         frame_rect = rotated_frame.get_rect(center=(player_x, player_y))
@@ -414,22 +420,24 @@ def run(screen, map_image=None):
 
         if not paused:
             # spawn meteorov
-            if pygame.time.get_ticks() - last_spawn_time > spawn_delay:
+            if get_game_time() - last_spawn_time > spawn_delay:
                 m = Meteor(meteor_image, width, height,
                            min_size=meteory_velkost_min, max_size=meteory_velkost_max,
                            base_speed=base_speed)
                 meteory.append(m)
-                last_spawn_time = pygame.time.get_ticks()
+                last_spawn_time = get_game_time()
 
             # update fuel
-            fuel -= fuel_depletion_rate
+            if not paused:
+                fuel -= fuel_depletion_rate
             fuel = max(fuel, 0)
 
             # spawn fuel
-            now = pygame.time.get_ticks()
+            now = get_game_time()
             if fuel_pos is None and now - fuel_spawn_time > 13500:
                 fuel_pos = spawn_fuel()
                 fuel_spawn_time = now
+
             elif fuel_pos is not None and now - fuel_spawn_time > fuel_duration:
                 fuel_pos = None
 
@@ -585,20 +593,24 @@ def run(screen, map_image=None):
             screen.blit(shield_icon_scaled, (slot_rect.x + 6, slot_rect.y + 6))
 
         if shield_active:
-            remaining_time = max(0, shield_end_time - pygame.time.get_ticks())
+            remaining_time = max(0, shield_end_time - get_game_time())
             max_bar_width = 300
             bar_height = 25
             bar_x, bar_y = 20, 160
             bar_width = int((remaining_time / shield_active_duration) * max_bar_width)
-            pygame.draw.rect(screen, (50, 50, 50), (bar_x, bar_y, max_bar_width, bar_height))
-            pygame.draw.rect(screen, (0, 100, 255), (bar_x, bar_y, bar_width, bar_height))
-            pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, max_bar_width, bar_height), 2)
-            if pygame.time.get_ticks() > shield_end_time:
+            if not paused:
+                pygame.draw.rect(screen, (50, 50, 50), (bar_x, bar_y, max_bar_width, bar_height))
+                pygame.draw.rect(screen, (0, 100, 255), (bar_x, bar_y, bar_width, bar_height))
+                pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, max_bar_width, bar_height), 2)
+            if get_game_time() > shield_end_time:
                 shield_active = False
 
         # draw meteors
         for meteor in meteory:
             meteor.draw(screen)
+
+        if get_game_time() > shield_end_time:
+            shield_active = False
 
         # draw fuel if exists
         if fuel_pos is not None:
@@ -618,7 +630,7 @@ def run(screen, map_image=None):
         if shield_active:
             shield_surface = pygame.Surface((SHIELD_RADIUS * 2, SHIELD_RADIUS * 2), pygame.SRCALPHA)
 
-            pulse = 10 * abs((pygame.time.get_ticks() // 150) % 2 - 1)
+            pulse = 10 * abs((get_game_time() // 150) % 2 - 1)
 
             # štít
             pygame.draw.circle(
