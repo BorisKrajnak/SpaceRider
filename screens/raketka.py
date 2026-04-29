@@ -106,10 +106,11 @@ def draw_gradient_rect(surface, rect, color_top, color_bottom, radius=12):
     pygame.draw.rect(surface, (255, 255, 255), rect, width=2, border_radius=radius)
 
 
-def draw_pause_button(surface, rect):
+def draw_pause_button(surface, rect, paused):
     color1 = (50, 0, 70)
     color2 = (20, 0, 20)
 
+    # --- gradient ---
     gradient = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
     for y in range(rect.height):
         ratio = y / rect.height
@@ -118,16 +119,37 @@ def draw_pause_button(surface, rect):
         b = int(color1[2] + (color2[2] - color1[2]) * ratio)
         pygame.draw.line(gradient, (r, g, b, 220), (0, y), (rect.width, y))
 
+    # ✅ MASKA pre zaoblené rohy
+    mask = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=8)
+
+    gradient.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+    # vykreslenie
     surface.blit(gradient, rect.topleft)
+
+    # orámovanie
     pygame.draw.rect(surface, (255, 255, 255), rect, 3, border_radius=8)
 
     cx, cy = rect.center
-    bar_w = 6
-    bar_h = rect.height // 2
-    spacing = 10
 
-    pygame.draw.rect(surface, (255,255,255), (cx - spacing, cy - bar_h//2, bar_w, bar_h))
-    pygame.draw.rect(surface, (255,255,255), (cx + spacing - bar_w, cy - bar_h//2, bar_w, bar_h))
+    if paused:
+        # ▶ PLAY
+        size = rect.height // 4
+        points = [
+            (cx - size//2, cy - size),
+            (cx - size//2, cy + size),
+            (cx + size, cy)
+        ]
+        pygame.draw.polygon(surface, (255, 255, 255), points)
+    else:
+        # || PAUZA
+        bar_w = 6
+        bar_h = rect.height // 2
+        spacing = 10
+
+        pygame.draw.rect(surface, (255,255,255), (cx - spacing, cy - bar_h//2, bar_w, bar_h))
+        pygame.draw.rect(surface, (255,255,255), (cx + spacing - bar_w, cy - bar_h//2, bar_w, bar_h))
 
 
 def draw_pause_menu(screen, width, height, font):
@@ -646,29 +668,31 @@ def run(screen, map_image=None):
 
             screen.blit(shield_surface, (player_x - SHIELD_RADIUS, player_y - SHIELD_RADIUS))
 
-        # --- Draw music button using same style as settings ---
-        music_state = get_music_state()
-        draw_music_button(screen, music_button_rect, music_state, mute_img if mute_img else mute_icon_path, unmute_img if unmute_img else unmute_icon_path)
-
-        draw_pause_button(screen, pause_button_rect)
-
-        if paused:
-            buttons = draw_pause_menu(screen, width, height, font)
 
 
         # fuel bar
         fuel_bar_pos = (20, 120)
         fuel_bar_size = (300, 25)
-        pygame.draw.rect(screen, (50,50,50), (*fuel_bar_pos, *fuel_bar_size))
+        pygame.draw.rect(screen, (50, 50, 50), (*fuel_bar_pos, *fuel_bar_size))
         filled_width = int(fuel_bar_size[0] * (fuel / 100))
         if fuel > 60:
-            fuel_color = (0,255,0)
+            fuel_color = (0, 255, 0)
         elif fuel > 30:
-            fuel_color = (255,165,0)
+            fuel_color = (255, 165, 0)
         else:
-            fuel_color = (255,0,0)
+            fuel_color = (255, 0, 0)
         pygame.draw.rect(screen, fuel_color, (fuel_bar_pos[0], fuel_bar_pos[1], filled_width, fuel_bar_size[1]))
-        pygame.draw.rect(screen, (255,255,255), (*fuel_bar_pos, *fuel_bar_size), 2)
+        pygame.draw.rect(screen, (255, 255, 255), (*fuel_bar_pos, *fuel_bar_size), 2)
+
+        if paused:
+            buttons = draw_pause_menu(screen, width, height, font)
+
+        # --- Draw music button using same style as settings ---
+        music_state = get_music_state()
+        draw_music_button(screen, music_button_rect, music_state, mute_img if mute_img else mute_icon_path,
+                            unmute_img if unmute_img else unmute_icon_path)
+
+        draw_pause_button(screen, pause_button_rect, paused)
 
         pygame.display.flip()
         pygame.time.Clock().tick(60)
