@@ -30,12 +30,12 @@ def draw_gradient_button(surface, rect, text, font, color1, color2):
 # --- Prevod hodnotenia ---
 def grade_to_text(grade):
     return {
-        1: "výborný/á",
-        2: "chválitebný/á",
-        3: "dobrý/á",
-        4: "dostatočný/á",
-        5: "nedostatočný/á"
-    }.get(grade, "neznáme hodnotenie")
+        1: "vyborny/a",
+        2: "chvalitebny/a",
+        3: "dobry/a",
+        4: "dostatocny/a",
+        5: "nedostatocny/a"
+    }.get(grade, "nezname hodnotenie")
 
 # --- Funkcia pre popup nové best score ---
 def show_best_popup(screen, value, trofej_img, draw_bg_func):
