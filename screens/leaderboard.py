@@ -4,6 +4,7 @@ from core.config import IMG_DIR, FONT_DIR
 from core.game_state import GameState
 from core.music_manager import start_music, get_music_state, toggle_mute
 from core.score_manager import get_leaderboard
+from core.auth_manager import get_user
 
 start_music()
 
@@ -67,6 +68,15 @@ def run(screen):
 
     games = ["raketka", "ufo", "school"]
     leaderboards = {g: [] for g in games}
+    user = get_user()
+
+    if isinstance(user, dict):
+        email = user.get("email", "")
+    else:
+        email = user or ""
+
+    # z emailu sprav meno (boris@gmail.com → boris)
+    current_user = email.split("@")[0].lower()
 
     active_game_index = 0
 
@@ -133,12 +143,17 @@ def run(screen):
 
                 player = data[idx]
 
+
                 score = player["score"]
                 if game == "school":
                     score = f"{float(score):.2f}"
 
                 text = f"{idx + 1}. {player['name']} - {score}"
-                surf = font.render(text, True, WHITE)
+
+                is_current_user = player.get("name", "").lower() == current_user
+                text_color = (255, 215, 0) if is_current_user else WHITE
+
+                surf = font.render(text, True, text_color)
 
                 y = start_y + i * ROW_HEIGHT
 

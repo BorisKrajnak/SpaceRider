@@ -294,6 +294,9 @@ class PlayerUFO:
         self.shield_active = True
         self.shield_start = pygame.time.get_ticks()
 
+        self.shield_pause_total = 0
+        self.shield_pause_start = 0
+
     def update_shield(self, paused=False):
         if not self.shield_active:
             return
