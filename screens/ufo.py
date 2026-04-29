@@ -135,7 +135,8 @@ def draw_pause_menu(screen, width, height, font):
     start_y = height // 2 - 100
 
     buttons = {
-        "resume": pygame.Rect(center_x, start_y, btn_w, btn_h),
+        "resume": pygame.Rect(center_x, start_y-90, btn_w, btn_h),
+        "restart": pygame.Rect(center_x, start_y, btn_w, btn_h),
         "menu": pygame.Rect(center_x, start_y + 90, btn_w, btn_h),
         "quit": pygame.Rect(center_x, start_y + 180, btn_w, btn_h)
     }
@@ -464,11 +465,13 @@ def run(screen):
                     if buttons["resume"].collidepoint(event.pos):
                         paused = False
                         paused_time_total += pygame.time.get_ticks() - pause_start_time
+                    elif buttons["restart"].collidepoint(event.pos):
+                        return GameState.UFO_GAME
 
-                    if buttons["menu"].collidepoint(event.pos):
+                    elif buttons["menu"].collidepoint(event.pos):
                         return GameState.MENU
 
-                    if buttons["quit"].collidepoint(event.pos):
+                    elif buttons["quit"].collidepoint(event.pos):
                         pygame.quit()
                         exit()
 

@@ -140,7 +140,8 @@ def draw_pause_menu(screen, width, height, font):
     start_y = height // 2 - 100
 
     buttons = {
-        "resume": pygame.Rect(center_x, start_y, btn_w, btn_h),
+        "resume": pygame.Rect(center_x, start_y-90, btn_w, btn_h),
+        "restart": pygame.Rect(center_x, start_y, btn_w, btn_h),
         "menu": pygame.Rect(center_x, start_y + 90, btn_w, btn_h),
         "quit": pygame.Rect(center_x, start_y + 180, btn_w, btn_h)
     }
@@ -367,6 +368,9 @@ def run(screen, map_image=None):
                     if buttons["resume"].collidepoint(event.pos):
                         paused = False
                         paused_time_total += get_game_time() - pause_start_time
+
+                    elif buttons["restart"].collidepoint(event.pos):
+                        return GameState.ROCKET_GAME
 
                     elif buttons["menu"].collidepoint(event.pos):
                         return GameState.MENU

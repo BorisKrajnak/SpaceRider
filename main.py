@@ -73,10 +73,9 @@ while running:
 
         if isinstance(game_result, GameResult):
             new_state = game_result.next_state
-        elif isinstance(game_result, GameState):
-            new_state = game_result
         else:
-            new_state = GameState.MENU
+            new_state = game_result
+            game_result = None
 
 
     # --- SCHOOL ---

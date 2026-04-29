@@ -72,7 +72,7 @@ def run(screen):
     if os.path.exists(voyager_path):
         title_font = pygame.font.Font(voyager_path, 170)
         button_font = pygame.font.Font(voyager_path, 50)
-        small_font = pygame.font.Font(voyager_path, 25)
+        small_font = pygame.font.SysFont("Arial", 25)
     else:
         title_font = pygame.font.SysFont("Arial", 170, bold=True)
         button_font = pygame.font.SysFont("Arial", 50, bold=True)
@@ -98,11 +98,61 @@ def run(screen):
     clock = pygame.time.Clock()
 
     rules_lines = [
-        "Cielom je prezit co najdlhsie vo vesmire a ziskat najvecsie skore.",
-        "Vyber raketku, UFO alebo skolsku verziu.",
-        "Vyhybaj sa meteoritom, zbieraj palivo a power upy.",
-        "Niektore power-upy su docasne a aktivuj ich klavesou E.",
-        "Ovladanie: WASD."
+        "=== CIEĽ HRY ===",
+        "Tvojím cieľom je prežiť čo najdlhšie vo vesmíre.",
+        "Za prežitie, zbieranie objektov a vyhýbanie sa prekážkam získavaš skóre.",
+        "Čím dlhšie prežiješ, tým vyššie skóre dosiahneš.",
+        "",
+        "=== HERNÉ MÓDY ===",
+        "RAKETKA:",
+        "- Pohyb vo všetkých smeroch (W, A, S, D).",
+        "- Najjednoduchší mód na ovládanie.",
+        "",
+        "UFO:",
+        "- Funguje na princípe gravitácie (neustále padá dole).",
+        "- W = skok / zdvih nahor.",
+        "- A / D = pohyb do strán.",
+        "- Vyžaduje presné načasovanie pohybu.",
+        "",
+        "ŠKOLSKÝ MÓD:",
+        "- Ovládanie rovnaké ako raketka (W, A, S, D).",
+        "- Jednoduchší mód vhodný na tréning.",
+        "",
+        "=== OVLÁDANIE ===",
+        "W - pohyb hore / skok (UFO)",
+        "A - pohyb doľava",
+        "S - pohyb dole (raketka)",
+        "D - pohyb doprava",
+        "E - aktivovanie power-upu",
+        "",
+        "=== HERNÉ PRVKY ===",
+        "METEORITY:",
+        "- Hlavná prekážka v hre.",
+        "- Pri zrážke hra končí.",
+        "",
+        "PALIVO:",
+        "- Potrebné na prežitie.",
+        "- Ak ho nezbieraš, môžeš prehrať.",
+        "",
+        "POWER-UPY:",
+        "- Poskytujú dočasné výhody.",
+        "- Niektoré sa aktivujú automaticky.",
+        "- Iné musíš aktivovať klávesou E.",
+        "",
+        "=== KLÁVESOVÉ SKRATKY ===",
+        "M - zapnutie / vypnutie hudby",
+        "P - pauza hry",
+        "ESC - návrat späť do menu",
+        "ENTER - pokračovanie / potvrdenie",
+        "",
+        "=== TIPY PRE HRÁČA ===",
+        "- Sleduj okolie a plánuj pohyb dopredu.",
+        "- Pri UFO móde dávaj pozor na gravitáciu.",
+        "- Power-upy používaj strategicky.",
+        "- Zbieraj palivo čo najčastejšie.",
+        "- Čím dlhšie prežiješ, tým rýchlejšia hra bude.",
+        "",
+        "VEĽA ŠŤASTIA, PILOT"
     ]
 
     start_music()
@@ -112,12 +162,17 @@ def run(screen):
     start_time = pygame.time.get_ticks()
     running = True
 
+    scroll_offset = 0
+    scroll_speed = 20
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return None
+
             if pygame.time.get_ticks() - start_time < 400:
                 continue
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     return GameState.LOGIN
@@ -125,18 +180,27 @@ def run(screen):
                     return GameState.SETTINGS
                 elif event.key == pygame.K_m:
                     toggle_mute()
-
                     music_state = get_music_state()
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if logout_btn.collidepoint(event.pos):
                     return GameState.LOGIN
+
                 if next_btn.collidepoint(event.pos):
                     return GameState.SETTINGS
+
                 if rules_btn.collidepoint(event.pos):
                     showing_rules = not showing_rules
+
                 if music_btn.collidepoint(event.pos):
                     toggle_mute()
                     music_state = get_music_state()
+
+                if event.button == 4:  # scroll hore
+                    scroll_offset = max(scroll_offset - scroll_speed, 0)
+
+                if event.button == 5:  # scroll dole
+                    scroll_offset += scroll_speed
 
         if background_img:
             screen.blit(background_img, (0, 0))
@@ -152,23 +216,79 @@ def run(screen):
 
         if showing_rules:
             popup_w, popup_h = 800, 500
-            popup_rect = pygame.Rect((width - popup_w)//2, (height - popup_h)//2, popup_w, popup_h)
+            popup_rect = pygame.Rect((width - popup_w) // 2, (height - popup_h) // 2, popup_w, popup_h)
             draw_gradient_rect(screen, popup_rect, (50, 0, 50), (10, 0, 10))
 
             heading = button_font.render("PRAVIDLÁ HRY", True, WHITE)
             screen.blit(heading, heading.get_rect(center=(popup_rect.centerx, popup_rect.top + 60)))
 
             text_padding = 40
-            max_text_width = popup_rect.width - 2 * text_padding
-            line_height = 40
+            line_height = 35
+
+            # Vytvorenie surface pre scroll
+            content_height = len(rules_lines) * line_height + 50
+            scroll_surface = pygame.Surface((popup_rect.width - 2 * text_padding, content_height), pygame.SRCALPHA)
+
             for i, line in enumerate(rules_lines):
                 txt_surface = small_font.render(line, True, WHITE)
-                if txt_surface.get_width() > max_text_width:
-                    scale = max_text_width / txt_surface.get_width()
-                    txt_surface = pygame.transform.smoothscale(txt_surface, (int(txt_surface.get_width()*scale), int(txt_surface.get_height()*scale)))
-                txt_rect = txt_surface.get_rect()
-                txt_rect.topleft = (popup_rect.left + text_padding, popup_rect.top + 150 + i * line_height)
-                screen.blit(txt_surface, txt_rect)
+                scroll_surface.blit(txt_surface, (0, i * line_height))
+
+            # Limit scrollu
+            max_scroll = max(0, content_height - (popup_rect.height - 150))
+            scroll_offset = min(scroll_offset, max_scroll)
+
+            # Výrez (viewport)
+            view_rect = pygame.Rect(0, scroll_offset, popup_rect.width - 2 * text_padding, popup_rect.height - 150)
+
+            screen.blit(
+                scroll_surface,
+                (popup_rect.left + text_padding, popup_rect.top + 120),
+                view_rect
+            )
+
+            # === SCROLLBAR ===
+            bar_width = 10
+            bar_x = popup_rect.right - 15
+            bar_y = popup_rect.top + 120
+            bar_height = popup_rect.height - 150
+
+            # pozadie scrollbaru
+            pygame.draw.rect(screen, (80, 80, 80), (bar_x, bar_y, bar_width, bar_height), border_radius=5)
+
+            # výška jazdca (thumb)
+            if content_height > 0:
+                thumb_height = max(40, bar_height * (bar_height / content_height))
+            else:
+                thumb_height = bar_height
+
+            # pozícia jazdca
+            if max_scroll > 0:
+                thumb_y = bar_y + (scroll_offset / max_scroll) * (bar_height - thumb_height)
+            else:
+                thumb_y = bar_y
+
+
+            # samotný jazdec
+            pygame.draw.rect(screen, (200, 200, 200), (bar_x, thumb_y, bar_width, thumb_height), border_radius=5)
+
+            # klik na scrollbar (začiatok drag)
+            bar_width = 10
+            bar_x = popup_rect.right - 15
+            bar_y = popup_rect.top + 120
+            bar_height = popup_rect.height - 150
+
+            if content_height > 0:
+                thumb_height = max(40, bar_height * (bar_height / content_height))
+            else:
+                thumb_height = bar_height
+
+            if max_scroll > 0:
+                thumb_y = bar_y + (scroll_offset / max_scroll) * (bar_height - thumb_height)
+            else:
+                thumb_y = bar_y
+
+            thumb_rect = pygame.Rect(bar_x, thumb_y, bar_width, thumb_height)
+
 
         pygame.display.update()
         clock.tick(60)
