@@ -218,7 +218,7 @@ def run(screen, result: GameResult):
                               score, cas, best_score, star_img, time_img, trofej_img,
                               restart_button, settings_button, quit_button, mute_button)
 
-    # --- POPUP len raz ---
+    # --- POPUP  ---
     score = result.score
     cas = result.time
     if result.game_name == "ufo":
@@ -240,7 +240,7 @@ def run(screen, result: GameResult):
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return None
 
-            # 🔄 RESTART
+            # RESTART
             if (event.type == pygame.MOUSEBUTTONDOWN and restart_button.collidepoint(event.pos)) or \
                (event.type == pygame.KEYDOWN and event.key == pygame.K_r):
 
@@ -252,16 +252,16 @@ def run(screen, result: GameResult):
 
                 return GameState.ROCKET_GAME if active_game == "raketka" else GameState.UFO_GAME
 
-            # ⚙️ MENU
+            #MENU
             if (event.type == pygame.MOUSEBUTTONDOWN and settings_button.collidepoint(event.pos)) or \
                (event.type == pygame.KEYDOWN and event.key == pygame.K_n):
                 return GameState.SETTINGS
 
-            # ❌ QUIT
+            #QUIT
             if event.type == pygame.MOUSEBUTTONDOWN and quit_button.collidepoint(event.pos):
                 return None
 
-            # 🔊 MUTE
+            #MUTE
             if (event.type == pygame.MOUSEBUTTONDOWN and mute_button.collidepoint(event.pos)) or \
                (event.type == pygame.KEYDOWN and event.key == pygame.K_m):
                 toggle_mute()

@@ -9,7 +9,7 @@ from core.game_state import GameState
 WHITE = (255, 255, 255)
 
 
-# Pomocná funkcia – scale obrázka so zachovaním pomeru
+# scale obrázka so zachovaním pomeru
 def scale_to_fit(image, max_w, max_h):
     w, h = image.get_size()
     scale = min(max_w / w, max_h / h)
@@ -179,7 +179,7 @@ def run(screen):
                 if back_button.collidepoint(event.pos):
                     return GameState.MENU
 
-                if leaderboard_button.collidepoint(event.pos):  # 🔥 NOVÉ
+                if leaderboard_button.collidepoint(event.pos):
                     return GameState.LEADERBOARD
 
                 if music_button_rect.collidepoint(event.pos):

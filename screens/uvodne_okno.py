@@ -202,10 +202,10 @@ def run(screen):
                     toggle_mute()
                     music_state = get_music_state()
 
-                if event.button == 4:  # scroll hore
+                if event.button == 4:
                     scroll_offset = max(scroll_offset - scroll_speed, 0)
 
-                if event.button == 5:  # scroll dole
+                if event.button == 5:
                     scroll_offset += scroll_speed
 
         if background_img:
@@ -215,7 +215,7 @@ def run(screen):
 
         screen.blit(title_text, (width // 2 - title_text.get_width() // 2, 140))
 
-        draw_gradient_button(screen, logout_btn, "LOG OUT", button_font, (50, 0, 70), (20, 0, 20))  # <- text zmenený
+        draw_gradient_button(screen, logout_btn, "LOG OUT", button_font, (50, 0, 70), (20, 0, 20))
         draw_gradient_button(screen, rules_btn, "RULES", button_font, (50, 0, 70), (20, 0, 20))
         draw_gradient_button(screen, next_btn, "NEXT", button_font, (50, 0, 70), (20, 0, 20))
         draw_music_button(screen, music_btn, music_state)
@@ -231,7 +231,7 @@ def run(screen):
             text_padding = 40
             line_height = 35
 
-            # Vytvorenie surface pre scroll
+            # surface pre scroll
             content_height = len(rules_lines) * line_height + 50
             scroll_surface = pygame.Surface((popup_rect.width - 2 * text_padding, content_height), pygame.SRCALPHA)
 
@@ -239,11 +239,10 @@ def run(screen):
                 txt_surface = small_font.render(line, True, WHITE)
                 scroll_surface.blit(txt_surface, (0, i * line_height))
 
-            # Limit scrollu
+            # limit scrollu
             max_scroll = max(0, content_height - (popup_rect.height - 150))
             scroll_offset = min(scroll_offset, max_scroll)
 
-            # Výrez (viewport)
             view_rect = pygame.Rect(0, scroll_offset, popup_rect.width - 2 * text_padding, popup_rect.height - 150)
 
             screen.blit(
@@ -261,23 +260,18 @@ def run(screen):
             # pozadie scrollbaru
             pygame.draw.rect(screen, (80, 80, 80), (bar_x, bar_y, bar_width, bar_height), border_radius=5)
 
-            # výška jazdca (thumb)
             if content_height > 0:
                 thumb_height = max(40, bar_height * (bar_height / content_height))
             else:
                 thumb_height = bar_height
 
-            # pozícia jazdca
             if max_scroll > 0:
                 thumb_y = bar_y + (scroll_offset / max_scroll) * (bar_height - thumb_height)
             else:
                 thumb_y = bar_y
 
-
-            # samotný jazdec
             pygame.draw.rect(screen, (200, 200, 200), (bar_x, thumb_y, bar_width, thumb_height), border_radius=5)
 
-            # klik na scrollbar (začiatok drag)
             bar_width = 10
             bar_x = popup_rect.right - 15
             bar_y = popup_rect.top + 120

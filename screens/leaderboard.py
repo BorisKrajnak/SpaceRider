@@ -12,7 +12,7 @@ WHITE = (255, 255, 255)
 SPACE_BLUE = (10, 10, 40)
 PURPLE = (31, 10, 30)
 
-PADDING_X = 25  # 👈 zarovnanie doľava
+PADDING_X = 25
 
 
 # ---------------- UI ----------------
@@ -75,7 +75,6 @@ def run(screen):
     else:
         email = user or ""
 
-    # z emailu sprav meno (boris@gmail.com → boris)
     current_user = email.split("@")[0].lower()
 
     active_game_index = 0
@@ -157,7 +156,6 @@ def run(screen):
 
                 y = start_y + i * ROW_HEIGHT
 
-                # 👈 LEFT ALIGN v stĺpci
                 screen.blit(surf, (x_center + PADDING_X, y))
 
         # ---------------- BUTTONS ----------------
@@ -173,12 +171,11 @@ def run(screen):
             if event.type == pygame.KEYDOWN:
 
                 if event.key == pygame.K_ESCAPE:
-                    return GameState.MENU
+                    return GameState.SETTINGS
 
                 if event.key == pygame.K_m:
                     toggle_mute()
 
-                # TAB → switch column
                 if event.key == pygame.K_TAB:
                     active_game_index = (active_game_index + 1) % len(games)
 
@@ -194,7 +191,6 @@ def run(screen):
                 if event.key == pygame.K_DOWN:
                     scroll_index[active_game] += 1
 
-            # mouse wheel scroll
             if event.type == pygame.MOUSEWHEEL:
                 scroll_index[active_game] -= event.y
 

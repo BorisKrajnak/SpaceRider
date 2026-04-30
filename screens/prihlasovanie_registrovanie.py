@@ -96,7 +96,7 @@ class InputBox:
                     self.text = self.text[:self.cursor_pos - 1] + self.text[self.cursor_pos:]
                     self.cursor_pos -= 1
                     self.update_surface()
-                return  #ZABRÁNI PRIDANIU
+                return
 
             if event.key == pygame.K_DELETE:
                 if self.cursor_pos < len(self.text):

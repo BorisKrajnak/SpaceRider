@@ -116,7 +116,7 @@ def run(screen):
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return GameState.MENU
+                    return GameState.SETTINGS
                 if event.key == pygame.K_m:
                     toggle_mute()
 
@@ -163,7 +163,7 @@ def run(screen):
 
             cfg_path = os.path.join(BASE_DIR, "data", "game_config.json")
 
-            # --- load config bezpečne ---
+            # --- load config ---
             cfg = {}
             if os.path.exists(cfg_path):
                 with open(cfg_path, "r") as f:

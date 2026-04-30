@@ -55,7 +55,6 @@ class Meteor:
         return self.x + self.size < 0
 
 def draw_music_button(surface, rect, music_state, img_mute, img_unmute):
-    # --- gradient background ---
     color1 = (50, 0, 70)
     color2 = (20, 0, 20)
     gradient = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
@@ -70,7 +69,7 @@ def draw_music_button(surface, rect, music_state, img_mute, img_unmute):
     pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=8)
     gradient.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-    # nakresliť gradient na hlavný surface
+    # vykresliť gradient na hlavný surface
     surface.blit(gradient, rect.topleft)
 
     # biele orámovanie
@@ -119,7 +118,7 @@ def draw_pause_button(surface, rect, paused):
         b = int(color1[2] + (color2[2] - color1[2]) * ratio)
         pygame.draw.line(gradient, (r, g, b, 220), (0, y), (rect.width, y))
 
-    # ✅ MASKA pre zaoblené rohy
+    #  zaoblené rohy
     mask = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
     pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=8)
 
@@ -134,7 +133,6 @@ def draw_pause_button(surface, rect, paused):
     cx, cy = rect.center
 
     if paused:
-        # ▶ PLAY
         size = rect.height // 4
         points = [
             (cx - size//2, cy - size),
@@ -143,7 +141,6 @@ def draw_pause_button(surface, rect, paused):
         ]
         pygame.draw.polygon(surface, (255, 255, 255), points)
     else:
-        # || PAUZA
         bar_w = 6
         bar_h = rect.height // 2
         spacing = 10
@@ -178,7 +175,7 @@ def draw_pause_menu(screen, width, height, font):
 
 
 
-# --- Hlavná funkcia (voláme z main.py ako state = raketka.run(screen)) ---
+# --- Hlavná funkcia  ---
 def run(screen, map_image=None):
     width, height = screen.get_size()
 
@@ -204,7 +201,7 @@ def run(screen, map_image=None):
     clock = pygame.time.Clock()
 
     WHITE = (255, 255, 255)
-    # načítanie rámcov animácie (raketka)
+    #animácia (raketka)
     gif_folder = get_path("assets", "img", "raketka_frames")
     player_frames = []
     if os.path.exists(gif_folder):
@@ -279,18 +276,18 @@ def run(screen, map_image=None):
     fuel_spawn_time = get_game_time()
     fuel_duration = 5000
 
-    # --- HEART POWERUP (extra životy) ---
+    # --- HEART POWERUP  ---
     heart_image = load_asset("doplnky", "heart.png", size=(55, 55)) or pygame.Surface((55, 55))
     heart_spawn_pos = None
     heart_spawn_time = get_game_time()
-    heart_spawn_interval = random.randint(3500, 5000)
+    heart_spawn_interval = random.randint(15000, 25000)
     heart_duration_on_map = 5000
     lives = 0
     max_lives = 3
 
     shield_spawn_pos = None
     shield_spawn_time = get_game_time()
-    shield_spawn_interval = random.randint(3000, 4000)
+    shield_spawn_interval = random.randint(10000, 20000)
     shield_duration_on_map = 5000
     hotbar_shields = []
     max_shields = 5
@@ -373,7 +370,7 @@ def run(screen, map_image=None):
                         shield_end_time = shield_active_start + shield_active_duration
                         hotbar_shields.pop(0)
                 if event.key == pygame.K_ESCAPE:
-                    return GameState.MENU
+                    return GameState.SETTINGS
                 if event.key == pygame.K_m:
                     toggle_mute()
                 if event.key == pygame.K_p:
@@ -401,7 +398,6 @@ def run(screen, map_image=None):
                         pygame.quit()
                         return None
 
-        # update herného času a score
         if not paused:
             elapsed_time = (get_game_time() - start_time ) // 1000
             score = meteory_obehol + elapsed_time
@@ -467,7 +463,7 @@ def run(screen, map_image=None):
             elif fuel_pos is not None and now - fuel_spawn_time > fuel_duration:
                 fuel_pos = None
 
-            # --- spawn shield on map
+            # --- spawn shield na mape
             if shield_spawn_pos is None and now - shield_spawn_time > shield_spawn_interval:
                 if len(hotbar_shields) < max_shields:
                     shield_spawn_pos = spawn_shield()
@@ -477,7 +473,7 @@ def run(screen, map_image=None):
                 shield_spawn_pos = None
                 shield_spawn_time = now
 
-            # --- spawn heart on map ---
+            # --- spawn heart na mape ---
             if heart_spawn_pos is None and now - heart_spawn_time > heart_spawn_interval:
                 if lives < max_lives:
                     heart_spawn_pos = (random.randint(50, width - 50), random.randint(50, height - 50))
@@ -516,7 +512,7 @@ def run(screen, map_image=None):
                     heart_spawn_pos = None
                     heart_spawn_time = now
 
-            # update meteory list and collisions
+            # update listu - meteorit a kolízie
             for meteor in meteory[:]:
                 meteor.update()
                 if meteor.is_off_screen():
@@ -550,7 +546,7 @@ def run(screen, map_image=None):
                                 game_name="raketka"
                             )
 
-            # fuel 0 -> koniec hry
+            # fuel 0 = koniec hry
             if fuel <= 0:
                 final_score = meteory_obehol + elapsed_time
                 skore_path = get_path("data", "skore.json")
@@ -588,8 +584,8 @@ def run(screen, map_image=None):
         hotbar_slot_size = 50
         hotbar_spacing = 12
 
-        # --- HEART HOTBAR (nad štítmi) ---
-        heart_hotbar_y = height - 140  # o level vyššie
+        # --- HEART HOTBAR  ---
+        heart_hotbar_y = height - 140
 
         for i in range(lives):
             slot_rect = pygame.Rect(hotbar_x + i * (hotbar_slot_size + hotbar_spacing),
@@ -603,7 +599,7 @@ def run(screen, map_image=None):
             heart_icon_scaled = pygame.transform.scale(heart_image, (hotbar_slot_size - 12, hotbar_slot_size - 12))
             screen.blit(heart_icon_scaled, (slot_rect.x + 6, slot_rect.y + 6))
 
-        # --- SHIELD HOTBAR (pod srdiečkami) ---
+        # --- SHIELD HOTBAR ---
         shield_hotbar_y = heart_hotbar_y + hotbar_slot_size + 10
 
         for i in range(len(hotbar_shields)):
@@ -631,28 +627,24 @@ def run(screen, map_image=None):
             if get_game_time() > shield_end_time:
                 shield_active = False
 
-        # draw meteors
         for meteor in meteory:
             meteor.draw(screen)
 
         if get_game_time() > shield_end_time:
             shield_active = False
 
-        # draw fuel if exists
         if fuel_pos is not None:
             screen.blit(fuel_image, fuel_pos)
 
-        # draw shield pickup if exists
         if shield_spawn_pos is not None:
             screen.blit(shield_image, shield_spawn_pos)
 
         if heart_spawn_pos is not None:
             screen.blit(heart_image, heart_spawn_pos)
 
-        # draw player
+        #player
         screen.blit(rotated_frame, frame_rect.topleft)
 
-        # --- draw shield effect (fixed size, no distortion) ---
         if shield_active:
             shield_surface = pygame.Surface((SHIELD_RADIUS * 2, SHIELD_RADIUS * 2), pygame.SRCALPHA)
 
@@ -687,7 +679,7 @@ def run(screen, map_image=None):
         if paused:
             buttons = draw_pause_menu(screen, width, height, font)
 
-        # --- Draw music button using same style as settings ---
+        # ---music button ---
         music_state = get_music_state()
         draw_music_button(screen, music_button_rect, music_state, mute_img if mute_img else mute_icon_path,
                             unmute_img if unmute_img else unmute_icon_path)
@@ -697,7 +689,6 @@ def run(screen, map_image=None):
         pygame.display.flip()
         pygame.time.Clock().tick(60)
 
-    # fallback
     return GameState.MENU
 
 if __name__ == "__main__":
