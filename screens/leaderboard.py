@@ -197,7 +197,7 @@ def run(screen):
             if event.type == pygame.MOUSEBUTTONDOWN:
 
                 if back_button.collidepoint(event.pos):
-                    return GameState.MENU
+                    return GameState.SETTINGS
 
                 if mute_button.collidepoint(event.pos):
                     toggle_mute()
